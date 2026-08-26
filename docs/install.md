@@ -45,6 +45,12 @@ The single rollout command publishes both the runtime contracts and the Codex ch
 python scripts\\install.py --force
 ```
 
+On Windows, the equivalent shortcut is:
+
+```text
+scripts\\install.bat
+```
+
 On Windows, this installs contracts into `%USERPROFILE%\\.agents\\0xsdlc` and chat skills into `%USERPROFILE%\\.codex\\skills`. Use `--agents-dir` or `--skills-dir` only when you intentionally use custom locations. Use `--skip-codex-skills` for a contracts-only rollout.
 
 ## Configure a provider
