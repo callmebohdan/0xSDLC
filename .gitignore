@@ -426,4 +426,23 @@ FodyWeavers.xsd
 *.msi
 *.msix
 *.msm
+
+# 0xSDLC local task artifacts and adapter transcripts
+sessions/
+.agents/
+*.stdout.txt
+*.stderr.txt
+
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets.json
+secrets.yaml
+secrets.yml
 *.msp

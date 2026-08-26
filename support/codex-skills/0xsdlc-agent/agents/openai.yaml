@@ -1,0 +1,4 @@
+interface:
+  display_name: "0xSDLC Phase Agent"
+  short_description: "Run one focused SDLC phase"
+  default_prompt: "Use $0xsdlc-agent for the requested 0xSDLC phase and preserve its evidence."
