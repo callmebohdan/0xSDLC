@@ -1,0 +1,4 @@
+interface:
+  display_name: "0xSDLC Autopilot"
+  short_description: "Run a safe spec-driven SDLC cycle"
+  default_prompt: "Use $0xsdlc-autopilot to route this engineering task through the safest complete SDLC cycle."
