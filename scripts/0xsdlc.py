@@ -23,14 +23,15 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 
 PHASE_CONTRACTS = {
-    "specify": "support/0xSDLC-spec/specification.md",
-    "audit": "support/0xSDLC-audit/audit.md",
+    "specify": "support/agents/0xSDLC-spec/specification.md",
+    "audit": "support/agents/0xSDLC-audit/audit.md",
     "design": "0xSDLC-design/design.md",
     "plan": "0xSDLC-plan/planning.md",
     "implement": "0xSDLC-implement/implementation.md",
-    "test": "support/0xSDLC-test/testing.md",
-    "review": "support/0xSDLC-review/review.md",
+    "test": "support/agents/0xSDLC-test/testing.md",
+    "review": "support/agents/0xSDLC-review/review.md",
     "verify": "0xSDLC-verify/verification.md",
+    "fix": "0xSDLC-fix/fix.md",
 }
 
 
@@ -100,6 +101,9 @@ PHASE_AGENT = {
     "fix": "fixer",
 }
 
+MAX_FIX_ATTEMPTS_PER_FINDING = 2
+MAX_TOTAL_FIX_ATTEMPTS = 4
+
 
 def slugify(value: str) -> str:
     value = re.sub(r"[^a-zA-Z0-9]+", "-", value.lower()).strip("-")
@@ -167,6 +171,8 @@ def route_payload(task_id: str, request: str, kind: str, model: str) -> dict[str
             phase: {"status": "pending", "attempts": 0, "lanes": {"primary": {"status": "pending"}}}
             for phase in phases
         },
+        "fix_attempts": 0,
+        "fix_attempts_by_finding": {},
         "events": [{"event": "route-prepared", "at": dt.datetime.now(dt.timezone.utc).isoformat()}],
         "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
     }
@@ -185,6 +191,13 @@ ALLOWED_TRANSITIONS = {
 
 def save_route(route_path: Path, route: dict[str, Any]) -> None:
     write_text(route_path, json.dumps(route, indent=2))
+
+
+def record_event(route_path: Path, route: dict[str, Any], event: str, **details: Any) -> None:
+    route.setdefault("events", []).append(
+        {"event": event, "at": dt.datetime.now(dt.timezone.utc).isoformat(), **details}
+    )
+    save_route(route_path, route)
 
 
 def transition(route_path: Path, route: dict[str, Any], phase: str, status: str, **details: Any) -> None:
@@ -224,6 +237,7 @@ def prompt_for(task_dir: Path, phase: str, model: str, lane: str = "primary", ou
         contract = LIBRARY / "support" / "adapters" / "generic.md"
     route = json.loads((task_dir / "route.json").read_text(encoding="utf-8"))
     artifact_names = [p.name for p in task_dir.iterdir() if p.is_file()]
+    active_finding = route.get("active_finding")
     return f"""# 0xSDLC phase packet
 
 Task ID: `{task_id}`
@@ -248,13 +262,17 @@ Required output artifact: `{output_artifact or PHASE_ARTIFACTS.get(phase, f'{pha
 
 {os.linesep.join(f"- `{name}`" for name in sorted(artifact_names))}
 
+## Focus constraint
+
+{f"For this bounded recovery attempt, address only review finding `{active_finding}` and preserve all other findings for later attempts." if phase == "fix" and active_finding else "No special recovery finding is selected for this phase."}
+
 ## Phase contract
 
 {contract.read_text(encoding="utf-8")}
 
 ## Global boundaries
 
-{(LIBRARY / "support" / "0xSDLC-conventions" / "boundaries.md").read_text(encoding="utf-8")}
+{(LIBRARY / "support" / "conventions" / "boundaries.md").read_text(encoding="utf-8")}
 
 ## Output requirement
 
@@ -306,6 +324,24 @@ def execute_adapter(
     return completed.returncode
 
 
+def artifact_errors(path: Path, task_id: str, phase: str) -> list[str]:
+    """Validate the small machine-readable header every phase artifact must have."""
+    text = path.read_text(encoding="utf-8")
+    header = text.split("---", 2)[1] if text.startswith("---") and "---" in text[3:] else ""
+    errors: list[str] = []
+    for field in ("schema_version", "task_id", "phase", "status"):
+        if not re.search(rf"^{field}:\s*.+$", header, re.I | re.M):
+            errors.append(f"missing front-matter field: {field}")
+    task_match = re.search(r"^task_id:\s*[\"']?([^\"'\s]+)[\"']?\s*$", header, re.I | re.M)
+    if not task_match or task_match.group(1) != task_id:
+        errors.append("task_id does not match the route")
+    if re.search(r"^phase:\s*[\"']?([^\"'\s]+)", header, re.I | re.M):
+        artifact_phase = re.search(r"^phase:\s*[\"']?([^\"'\s]+)", header, re.I | re.M).group(1)
+        if artifact_phase != phase:
+            errors.append(f"phase is {artifact_phase!r}, expected {phase!r}")
+    return errors
+
+
 def review_decision(task_dir: Path, parallel_checks: bool = False) -> str:
     """Read the review's explicit decision; conservative fallback treats clear findings as fixes."""
     reports = [task_dir / "review.md"]
@@ -328,6 +364,26 @@ def review_decision(task_dir: Path, parallel_checks: bool = False) -> str:
     if "needs-review" in decisions:
         return "needs-review"
     return "approve"
+
+
+def review_findings(task_dir: Path, parallel_checks: bool = False) -> list[str]:
+    """Extract stable finding IDs from review tables for per-finding retry limits."""
+    reports = [task_dir / "review.md"]
+    if parallel_checks:
+        reports.append(task_dir / "review-secondary.md")
+    findings: list[str] = []
+    for report in reports:
+        if not report.is_file():
+            continue
+        for match in re.finditer(
+            r"^\|\s*([^|]+?)\s*\|\s*P[0-3]\s*\|",
+            report.read_text(encoding="utf-8"),
+            re.I | re.M,
+        ):
+            finding_id = match.group(1).strip()
+            if finding_id and finding_id not in {"ID", "-"} and finding_id not in findings:
+                findings.append(finding_id)
+    return findings
 
 
 def run_phase(
@@ -369,6 +425,17 @@ def run_phase(
         transition(route_path, route, phase, "blocked", reason=f"missing required artifact(s): {', '.join(missing)}")
         print(f"Autopilot stopped; missing artifact(s): {', '.join(missing)}", file=sys.stderr)
         return 3
+    invalid = {
+        artifact: artifact_errors(task_dir / artifact, task_dir.name, phase)
+        for _, artifact in lanes
+        if artifact and (task_dir / artifact).is_file()
+    }
+    invalid = {artifact: errors for artifact, errors in invalid.items() if errors}
+    if invalid:
+        reason = "; ".join(f"{artifact}: {', '.join(errors)}" for artifact, errors in invalid.items())
+        transition(route_path, route, phase, "blocked", reason=f"invalid artifact metadata: {reason}")
+        print(f"Autopilot stopped; {reason}", file=sys.stderr)
+        return 3
     transition(route_path, route, phase, "succeeded", artifacts=[artifact for _, artifact in lanes if artifact])
     route.setdefault("completed_phases", []).append(phase)
     save_route(route_path, route)
@@ -381,6 +448,9 @@ def run_full_cycle(task_dir: Path, route: dict[str, Any], model: str, parallel_c
     index = 0
     while index < len(route["phases"]):
         phase = route["phases"][index]
+        if route["phase_states"][phase]["status"] == "succeeded":
+            index += 1
+            continue
         if phase == "approval":
             transition(route_path, route, phase, "needs-approval")
             print("Autopilot paused at the human approval gate.")
@@ -390,15 +460,26 @@ def run_full_cycle(task_dir: Path, route: dict[str, Any], model: str, parallel_c
             return result
         if phase == "review":
             fix_attempts = route.setdefault("fix_attempts", 0)
+            attempts_by_finding = route.setdefault("fix_attempts_by_finding", {})
             while review_decision(task_dir, parallel_checks) == "fix":
-                if fix_attempts >= 2:
+                findings = review_findings(task_dir, parallel_checks)
+                candidate = next(
+                    (
+                        finding
+                        for finding in findings
+                        if attempts_by_finding.get(finding, 0) < MAX_FIX_ATTEMPTS_PER_FINDING
+                    ),
+                    "review",
+                )
+                if fix_attempts >= MAX_TOTAL_FIX_ATTEMPTS or (candidate == "review" and findings):
                     route["status"] = "needs-review"
                     route["blocked_reason"] = "maximum fix attempts reached for review findings"
-                    route.setdefault("events", []).append({"event": "fix-limit-reached", "phase": "review", "at": dt.datetime.now(dt.timezone.utc).isoformat()})
-                    save_route(route_path, route)
+                    record_event(route_path, route, "fix-limit-reached", phase="review", findings=findings)
                     return 3
                 fix_attempts += 1
                 route["fix_attempts"] = fix_attempts
+                route["active_finding"] = candidate
+                attempts_by_finding[candidate] = attempts_by_finding.get(candidate, 0) + 1
                 save_route(route_path, route)
                 fix_artifact = f"fix-report-{fix_attempts}.md"
                 result = run_phase(task_dir, route, "fix", model, output_artifact=fix_artifact)
@@ -410,10 +491,10 @@ def run_full_cycle(task_dir: Path, route: dict[str, Any], model: str, parallel_c
                 result = run_phase(task_dir, route, "review", model, parallel_checks)
                 if result:
                     return result
+            route.pop("active_finding", None)
             if review_decision(task_dir, parallel_checks) == "needs-review":
                 route["status"] = "needs-review"
-                route.setdefault("events", []).append({"event": "review-needs-human", "at": dt.datetime.now(dt.timezone.utc).isoformat()})
-                save_route(route_path, route)
+                record_event(route_path, route, "review-needs-human")
                 return 0
         index += 1
     route["status"] = "completed"
@@ -421,6 +502,50 @@ def run_full_cycle(task_dir: Path, route: dict[str, Any], model: str, parallel_c
     save_route(route_path, route)
     print("Autopilot completed the routed SDLC cycle.")
     return 0
+
+
+def find_task(task_id: str) -> tuple[Path, dict[str, Any]]:
+    route_path = TASKS / task_id / "route.json"
+    if not route_path.is_file():
+        raise FileNotFoundError(f"task not found: {task_id}")
+    return route_path, json.loads(route_path.read_text(encoding="utf-8"))
+
+
+def cmd_approve(args: argparse.Namespace) -> int:
+    try:
+        route_path, route = find_task(args.task_id)
+    except (OSError, json.JSONDecodeError, FileNotFoundError) as exc:
+        print(exc, file=sys.stderr)
+        return 2
+    if route.get("current_phase") != "approval" or route.get("status") != "needs-approval":
+        print("Task is not waiting at an approval gate.", file=sys.stderr)
+        return 2
+    approval = {"approved_by": args.by, "approved_at": dt.datetime.now(dt.timezone.utc).isoformat(), "scope": args.scope}
+    route["approval"] = approval
+    transition(route_path, route, "approval", "succeeded", approval=approval)
+    route["status"] = "prepared"
+    record_event(route_path, route, "approval-recorded", **approval)
+    print(f"Approval recorded for {args.task_id}. Resume with: python scripts/0xsdlc.py resume {args.task_id}")
+    return 0
+
+
+def cmd_resume(args: argparse.Namespace) -> int:
+    try:
+        route_path, route = find_task(args.task_id)
+    except (OSError, json.JSONDecodeError, FileNotFoundError) as exc:
+        print(exc, file=sys.stderr)
+        return 2
+    if route.get("status") == "completed":
+        print("Task is already completed.")
+        return 0
+    if route.get("status") == "needs-approval" or route.get("current_phase") == "approval":
+        print("Task is waiting for approval. Run the approve command first.", file=sys.stderr)
+        return 2
+    if route.get("status") == "needs-review":
+        print("Task needs human review before it can be resumed.", file=sys.stderr)
+        return 2
+    model = select_model(args.model or route.get("model", "auto"))
+    return run_full_cycle(route_path.parent, route, model, args.parallel_checks)
 
 
 def cmd_autopilot(args: argparse.Namespace) -> int:
@@ -454,18 +579,7 @@ def cmd_autopilot(args: argparse.Namespace) -> int:
     if args.full and first_phase != "approval":
         return run_full_cycle(task_dir, route, model, args.parallel_checks)
     if args.execute and first_phase != "approval":
-        route_path = task_dir / "route.json"
-        transition(route_path, route, first_phase, "running")
-        result = execute_adapter(task_dir, first_phase, model, "primary", PHASE_ARTIFACTS.get(first_phase))
-        if result != 0:
-            transition(route_path, route, first_phase, "blocked", reason="adapter failure", exit_code=result)
-            return result
-        expected = PHASE_ARTIFACTS.get(first_phase)
-        if expected and not (task_dir / expected).is_file():
-            transition(route_path, route, first_phase, "blocked", reason=f"missing required artifact: {expected}")
-            return 3
-        transition(route_path, route, first_phase, "succeeded", artifacts=[expected] if expected else [])
-        return 0
+        return run_phase(task_dir, route, first_phase, model)
     if first_phase == "approval":
         print("Paused at the human approval gate before implementation.")
     else:
@@ -501,6 +615,16 @@ def build_parser() -> argparse.ArgumentParser:
     autopilot.add_argument("--full", action="store_true", help="with --execute, run the complete route until a gate, failure, or missing proof")
     autopilot.add_argument("--parallel-checks", action="store_true", help="with --full, run independent audit and review lanes; costs extra model calls")
     autopilot.set_defaults(func=cmd_autopilot)
+    approve = sub.add_parser("approve", help="record human approval for a waiting high-risk task")
+    approve.add_argument("task_id", help="task id shown by the autopilot command")
+    approve.add_argument("--by", required=True, help="person granting approval")
+    approve.add_argument("--scope", required=True, help="approved implementation scope")
+    approve.set_defaults(func=cmd_approve)
+    resume = sub.add_parser("resume", help="resume a prepared or blocked task route")
+    resume.add_argument("task_id", help="task id shown by the autopilot command")
+    resume.add_argument("--model", default=None, help="adapter name override")
+    resume.add_argument("--parallel-checks", action="store_true", help="run independent audit and review lanes; costs extra model calls")
+    resume.set_defaults(func=cmd_resume)
     status = sub.add_parser("status", help="list generated task routes")
     status.set_defaults(func=cmd_status)
     return parser

@@ -55,3 +55,13 @@ Write `design.md` using `templates/design.md`. Each proposed change must link to
 - [ ] Alternatives and tradeoffs are recorded where material.
 - [ ] Test, rollback, compatibility, and approval strategy are defined.
 - [ ] Non-goals and residual risks are visible.
+
+## Quality bar and failure handling
+
+The design must explain why the chosen seam is safe, how data and control move through it, what happens on partial failure, and how the change is rolled back. Do not present options without selecting one. Mark unresolved tradeoffs as decisions for approval.
+
+Stop with `needs-review` when the design requires a public contract, migration, dependency, security tradeoff, or irreversible action that is not approved. Stop with `blocked` when repository evidence is insufficient to choose safely.
+
+## Cost-aware context
+
+Read the specification, audit, architecture entry points, and relevant interfaces. Do not load unrelated modules or ask for parallel designs unless alternatives have materially different risk.

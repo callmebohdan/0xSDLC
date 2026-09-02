@@ -49,3 +49,13 @@ Write `review.md` using `templates/review.md`. End with a recommendation matchin
 - [ ] Critical failure and security paths were inspected.
 - [ ] Findings are prioritized and actionable.
 - [ ] Unreviewed areas and limitations are explicit.
+
+## Quality bar and failure handling
+
+The machine-readable `decision` controls routing and must agree with the recommendation: `approve` means no required correction remains, `fix` means actionable findings enter the fix loop, and `needs-review` means a human or missing evidence prevents a safe decision. Give every finding a stable ID, severity, evidence, impact, and recommendation.
+
+P0/P1 findings normally require a fix or human decision. P2 findings block when they affect a required criterion or material risk. P3 findings should be follow-ups unless the specification makes them mandatory. Never fix code while reviewing.
+
+## Cost-aware context
+
+Review the diff and criterion-linked evidence first. Inspect deeper callers, trust boundaries, or operational paths only when they could change the decision. A second reviewer is valuable only when it asks an independent question; use `--parallel-checks` sparingly.

@@ -8,8 +8,8 @@
 - Root `0xSDLC-*` folders contain the phase/subagent contracts.
 - `support/adapters/` contains provider translation contracts only.
 - `templates/` contains artifact schemas and agent-skill test templates.
-- `support/0xSDLC-conventions/` contains shared rules used by every phase.
-- `run-instructions/` contains how to load and execute agents.
+- `support/conventions/` contains shared rules used by every phase.
+- `docs/operations/` contains how to load and execute agents.
 - `orchestrator/` contains route/manifest and orchestration design.
 - `scripts/` contains dependency-free implementation utilities.
 - User-level `%USERPROFILE%\\.agents\\0xsdlc\\sessions` contains generated task state, reports, prompts, and transcripts.

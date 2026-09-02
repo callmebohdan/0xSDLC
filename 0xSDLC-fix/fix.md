@@ -28,7 +28,7 @@ Resolve one specific test failure, review finding, or verification gap with the 
 - Do not fix unrelated findings in the same slice.
 - Do not modify security controls or public contracts without approval.
 - Do not repeat the same attempted fix without new evidence.
-- After two unsuccessful fixes for the same finding, stop and request review.
+- After two unsuccessful fixes for the same finding, stop and request review. The orchestrator also caps a recovery cycle at four total attempts to control cost.
 - Preserve the original failure report; append a fix report instead of rewriting history.
 
 ## Special cases
@@ -49,3 +49,13 @@ Write `fix-report-<attempt>.md` using `templates/fix-report.md`, preserving earl
 - [ ] Change is minimal and in scope.
 - [ ] Regression evidence is recorded.
 - [ ] Original evidence remains preserved.
+
+## Quality bar and failure handling
+
+Every fix report must reference one finding ID, reproduce or confirm the problem, state the root-cause class, and name exact regression evidence. Preserve prior reports with an attempt suffix; never overwrite a failure to make the route appear green.
+
+Stop with `needs-review` when the finding is actually a specification, approval, or baseline problem. Stop after the configured attempt limit rather than repeating a low-confidence change.
+
+## Cost-aware context
+
+Load only the finding, its criterion, the relevant diff/source/tests, and the latest evidence. Do not rerun unrelated suites or ask multiple agents to attempt the same fix without new evidence.

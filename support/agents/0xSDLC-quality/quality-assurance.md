@@ -31,3 +31,11 @@ Perform the final quality gate between review and verification. Confirm that the
 ## Output
 
 Write `quality-report.md` using `templates/quality-report.md`. Include missing evidence, required actions, approvals, and next phase.
+
+## Position in the harness
+
+Quality assurance is not part of the default route. Invoke it for release, compliance, regulated, high-risk, or multi-team work when evidence integrity and process completeness need a separate gate. It complements review and must not duplicate line-by-line code review.
+
+## Cost-aware context
+
+Load reports and metadata first. Inspect source only when an evidence or release-risk claim cannot be checked from existing artifacts.

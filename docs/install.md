@@ -37,15 +37,15 @@ python scripts\0xsdlc.py autopilot "Add CSV export to reports"
 python scripts\0xsdlc.py status
 ```
 
-Inspect `%USERPROFILE%\\.agents\\0xsdlc\\sessions\\<task-id>\\brief.md`, `route.json`, and the first prompt before execution.
+Inspect `%USERPROFILE%\\.agents\\0xsdlc\\sessions\\<task-id>\\brief.md`, `route.json`, and the first prompt before execution. For a high-risk task, record approval with `python scripts\\0xsdlc.py approve <task-id> --by "Name" --scope "Exact approved scope"`, then continue with `resume`.
 
-The single rollout command publishes both the runtime contracts and the Codex chat skills:
+The single rollout command publishes the runtime contracts and registers portable skills for supported local AI tools:
 
 ```text
 python scripts\\install.py --force
 ```
 
-On Windows, this installs contracts into `%USERPROFILE%\\.agents\\0xsdlc` and chat skills into `%USERPROFILE%\\.codex\\skills`. Use `--agents-dir` or `--skills-dir` only when you intentionally use custom locations. Use `--skip-codex-skills` for a contracts-only rollout.
+On Windows, this installs contracts into `%USERPROFILE%\\.agents\\0xsdlc` and skills into `%USERPROFILE%\\.codex\\skills`, `%USERPROFILE%\\.claude\\skills`, `%USERPROFILE%\\.cursor\\skills`, and `%USERPROFILE%\\.agents\\skills`. Use `--agents-dir`, `--codex-skills-dir`, `--claude-skills-dir`, `--cursor-skills-dir`, or `--portable-skills-dir` only when you intentionally use custom locations. Use `--skip-provider-skills` for a contracts-only rollout; the old `--skip-codex-skills` name remains as a compatibility alias.
 
 ## Configure a provider
 

@@ -48,3 +48,13 @@ Write `test-report.md` using `templates/test-report.md`. Include command, workin
 - [ ] Relevant negative and boundary cases were considered.
 - [ ] Commands and exit codes are recorded.
 - [ ] Failures and unavailable checks are visible.
+
+## Quality bar and failure handling
+
+Tests must exercise requested behavior, not merely import code or assert that a control exists. Record setup, command, exit code, result, environment, and limitations. Classify failures as product, test, environment, baseline, or flaky before recommending a fix.
+
+Stop with `blocked` when a required fixture, dependency, service, or permission is unavailable. Do not change source or weaken tests to obtain a green result.
+
+## Cost-aware context
+
+Run the narrowest relevant checks first, then expand only when the change or risk requires it. Reuse unchanged results only when the artifact records why they remain valid.

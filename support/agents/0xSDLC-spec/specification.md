@@ -60,3 +60,13 @@ Write `spec.md` using `templates/spec.md`. The next agent must be able to plan f
 - [ ] Acceptance criteria are independently testable.
 - [ ] Non-functional requirements have measures or explicit decisions.
 - [ ] Invariants, edge cases, non-goals, and definition of done are present.
+
+## Quality bar and failure handling
+
+A good specification is testable by someone who did not attend the conversation. For each criterion, define the actor, trigger, observable result, failure result, and important boundary case. Separate must-have behavior from preferences and non-goals.
+
+Stop with `needs-review` when two interpretations are plausible or a product decision is required. Stop with `blocked` when the requested outcome cannot be stated honestly from available information. Do not fill missing requirements with implementation guesses.
+
+## Cost-aware context
+
+Load the brief, project instructions, relevant domain facts, and only source files needed to disambiguate behavior. Do not read the entire repository or invoke another model for wording cleanup.

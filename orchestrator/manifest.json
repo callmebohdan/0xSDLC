@@ -5,7 +5,6 @@
   "default_model": "generic",
   "agents": [
     "autopilot",
-    "intake",
     "specifier",
     "auditor",
     "architect",
@@ -29,6 +28,7 @@
     "quality-report.md",
     "verification.md",
     "fix-report.md",
-    "handoff.md"
+    "handoff.md",
+    "pull-request.md"
   ]
 }

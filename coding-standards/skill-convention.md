@@ -24,7 +24,7 @@ Every skill/subagent contract must be self-explanatory enough for a fresh model 
 
 ## Token discipline
 
-Detailed does not mean duplicated. Put universal rules in `support/0xSDLC-conventions/`; put only phase-specific rules in the phase folder; load the minimum relevant sections at runtime.
+Detailed does not mean duplicated. Put universal rules in `support/conventions/`; put only phase-specific rules in the phase folder; load the minimum relevant sections at runtime.
 
 ## Change checklist
 

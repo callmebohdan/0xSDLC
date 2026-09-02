@@ -59,3 +59,13 @@ Write `audit.md` using `templates/audit.md`. Cite paths and commands for importa
 - [ ] Existing conventions and integration boundaries are identified.
 - [ ] User changes and generated files are distinguished.
 - [ ] Unknowns and risks are actionable.
+
+## Quality bar and failure handling
+
+Every material claim must point to a path, command, configuration value, test, or reproducible observation. Distinguish “not found” from “does not exist”; record search scope and tool limitations. If the repository is large, narrow the audit to files and seams named by the specification.
+
+Stop with `blocked` when required evidence is inaccessible. Use `needs-review` when facts conflict or the audit reveals a safety, ownership, or compatibility decision for the user. Do not turn an audit into design or implementation.
+
+## Cost-aware context
+
+Prefer deterministic search and project commands over extra model calls. Load neighboring code only when it changes the risk or implementation decision.

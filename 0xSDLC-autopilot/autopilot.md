@@ -38,7 +38,7 @@ Classification is a starting decision record, not a waiver. The audit or review 
 4. Run phases in route order. Each phase must write its named artifact: `spec.md`, `audit.md`, `design.md`, `plan.md`, `implementation.md`, `test-report.md`, `review.md`, `verification.md`, or a bounded `fix-report-<attempt>.md`.
 5. Record every phase transition in `route.json`. A phase moves through `pending → running → succeeded`; failures become `blocked`, and human gates become `needs-approval`. Stop with status `needs-approval` at a human gate, `blocked` on adapter failure or missing required proof, and `completed` only after the final verification artifact exists.
 6. Never convert a command exit code, model response, or plausible reasoning into proof. Evidence must name commands, files, tests, diffs, or an explicit human decision.
-7. A failed phase is not retried indefinitely. Review findings with decision `fix` enter `fix → test → review`; preserve every report and stop after two fix attempts for the same cycle.
+7. A failed phase is not retried indefinitely. Review findings with decision `fix` enter `fix → test → review`; preserve every report, select one stable finding ID per fix attempt, stop after two attempts for the same finding, and cap the whole recovery cycle at four attempts.
 
 ## Optional parallel checks
 
@@ -46,7 +46,7 @@ Classification is a starting decision record, not a waiver. The audit or review 
 
 ## Human gates and autonomy
 
-Autopilot may inspect the repository, prepare specifications, plan, make scoped local edits, and run local checks when the task and existing permissions allow it. It must pause for secrets, production actions, destructive operations, migrations, public API changes, dependency or CI changes, unresolved product decisions, or any boundary marked `Ask first` in `support/0xSDLC-conventions/boundaries.md`.
+Autopilot may inspect the repository, prepare specifications, plan, make scoped local edits, and run local checks when the task and existing permissions allow it. It must pause for secrets, production actions, destructive operations, migrations, public API changes, dependency or CI changes, unresolved product decisions, or any boundary marked `Ask first` in `support/conventions/boundaries.md`.
 
 For a high-risk route, approval is recorded before implementation. Approval must identify the person or system decision, the approved scope, and any constraints. No agent may infer approval from silence.
 
