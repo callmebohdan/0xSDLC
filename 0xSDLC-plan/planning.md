@@ -47,3 +47,13 @@ Write `plan.md` using `templates/plan.md`. Include traceability from task IDs to
 - [ ] Parallel safety is explicit.
 - [ ] High-risk actions have approval tasks.
 - [ ] The task list is small enough to execute without context overload.
+
+## Quality bar and failure handling
+
+Each slice must have one outcome, one owner/agent, explicit dependencies, acceptance checks, and a rollback or recovery signal. Keep tasks ordered so the repository remains understandable after each slice. A plan is not ready if implementation requires inventing requirements or silently changing the design.
+
+Stop with `needs-review` when design, scope, or approval conditions changed. Stop with `blocked` when a dependency or precondition cannot be established.
+
+## Cost-aware context
+
+Compress design and audit into criterion-linked decisions. Avoid repeating repository inventory in every task; link to the audit artifact instead.

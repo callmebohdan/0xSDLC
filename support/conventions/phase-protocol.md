@@ -11,6 +11,13 @@ This is the operating procedure shared by every 0xSDLC subagent. The active suba
 5. Identify the task boundary: what is included, explicitly excluded, and potentially affected indirectly.
 6. If a required input is missing, contradictory, stale, or inaccessible, stop with `blocked` or `needs-review` and explain exactly what is needed.
 
+## Context discipline
+
+- Load the minimum tier from `context-budget.md` that can support the phase.
+- Treat the brief and approved specification as requirements; treat repository observations as evidence, not requirements.
+- Use the current phase's artifact as the only durable output. Put optional detail in linked evidence files rather than expanding every prompt.
+- Do not ask another agent to repeat work unless the new pass has a distinct question, model, or evidence boundary.
+
 ## While acting
 
 - Perform only the assigned phase. Do not silently perform planning, implementation, review, or deployment work belonging to another agent.
@@ -21,6 +28,7 @@ This is the operating procedure shared by every 0xSDLC subagent. The active suba
 - Re-check assumptions when an inspection result contradicts the brief or spec.
 - Preserve user changes. Never overwrite unrelated edits merely to make the working tree clean.
 - Use deterministic commands where possible and record the exact command and exit code.
+- Estimate whether the phase needs a stronger model, more context, or another reviewer before spending another model call.
 
 ## Before handing off
 
@@ -29,6 +37,7 @@ This is the operating procedure shared by every 0xSDLC subagent. The active suba
 3. Record files inspected and changed, commands run, evidence, failures, assumptions, risks, and next action.
 4. Use the output template and valid status vocabulary.
 5. Check that the next agent can continue without the current chat transcript.
+6. Confirm that the artifact is complete enough for the next phase and does not merely restate the prompt.
 
 ## Stop conditions
 

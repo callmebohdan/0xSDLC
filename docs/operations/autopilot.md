@@ -16,7 +16,7 @@ After reviewing the generated brief and route, run the complete route through th
 python scripts/0xSDLC-autopilot.py "Add CSV export to the reports page" --model codex --execute --full
 ```
 
-`--full` is deliberately opt-in and requires `--execute`. The runner stops at approval gates, adapter failures, or missing required phase artifacts. The detailed agent contract is [`0xSDLC-autopilot/autopilot.md`](../0xSDLC-autopilot/autopilot.md).
+`--full` is deliberately opt-in and requires `--execute`. The runner stops at approval gates, adapter failures, or missing required phase artifacts. The detailed agent contract is [`0xSDLC-autopilot/autopilot.md`](../../0xSDLC-autopilot/autopilot.md).
 
 ## Inputs
 
@@ -80,7 +80,7 @@ Stop immediately when a model requests secrets, proposes an unapproved destructi
 
 ## Human interaction points
 
-Autopilot may proceed without asking for low-risk inspection, planning, local edits, and local tests within scope. It must pause for the `Ask first` boundaries in `support/0xSDLC-conventions/boundaries.md`, unresolved product choices, and any high-risk route approval.
+Autopilot may proceed without asking for low-risk inspection, planning, local edits, and local tests within scope. It must pause for the `Ask first` boundaries in `support/conventions/boundaries.md`, unresolved product choices, and any high-risk route approval.
 
 ## Example route decision
 
