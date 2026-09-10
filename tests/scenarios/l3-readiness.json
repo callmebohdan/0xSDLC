@@ -1,0 +1,14 @@
+{
+  "schema_version": "0.1",
+  "adapter": "tests/fake_adapter.py",
+  "scenarios": [
+    {"id": "complete", "expected": "completed", "proves": ["full route", "telemetry"]},
+    {"id": "blocked", "expected": "blocked", "proves": ["artifact-declared stop"]},
+    {"id": "approval-resume", "expected": "completed", "proves": ["human gate", "durable approval", "resume"]},
+    {"id": "adapter-crash", "expected": "blocked", "proves": ["non-zero exit", "stderr preservation"]},
+    {"id": "invalid-artifact", "expected": "blocked", "proves": ["artifact schema enforcement"]},
+    {"id": "fix-loop", "expected": "completed", "proves": ["stable finding ID", "numbered history", "retest and rereview"]},
+    {"id": "interrupted", "expected": "completed", "proves": ["orphaned running recovery"]},
+    {"id": "dynamic-route", "expected": "needs-approval", "proves": ["evidence-driven route change", "reason event"]}
+  ]
+}

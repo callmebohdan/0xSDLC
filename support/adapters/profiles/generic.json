@@ -1,0 +1,8 @@
+{
+  "schema_version": "0.1",
+  "name": "generic",
+  "command_env": "0XSDLC_GENERIC_COMMAND",
+  "capabilities": {"prompt_file": true, "workspace": true, "artifact_output": true, "parallel_processes": true, "read_only_mode": "adapter-managed", "usage_sidecar": true},
+  "skill_locations": ["~/.agents/skills"],
+  "notes": "Fallback profile for a command-template adapter. Interactive discovery is not implied."
+}

@@ -1,0 +1,8 @@
+{
+  "schema_version": "0.1",
+  "name": "cursor",
+  "command_env": "0XSDLC_CURSOR_COMMAND",
+  "capabilities": {"prompt_file": true, "workspace": true, "artifact_output": true, "parallel_processes": false, "read_only_mode": "host-permissions", "usage_sidecar": false},
+  "skill_locations": ["~/.cursor/skills", "~/.agents/skills"],
+  "notes": "Interactive Cursor and automation bridges differ; record the actual execution surface and validate discovery."
+}
