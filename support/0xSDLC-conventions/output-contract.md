@@ -8,7 +8,7 @@ Every artifact begins with YAML-like front matter:
 
 ```yaml
 ---
-schema_version: "0.1"
+schema_version: "0.2"
 task_id: "task-id"
 phase: "phase-name"
 status: "ready"
@@ -21,6 +21,8 @@ assumptions:
 ```
 
 Use the actual task ID and phase. Keep input paths relative to the task directory where possible. If there are no assumptions, write `assumptions: []`; do not leave the field ambiguous.
+
+Artifact schema `0.2` is current; `0.1` remains readable for existing sessions. Route-sensitive phases may add `risk_level`, `route_add`, and `route_reason`. The orchestrator accepts only safe additive changes and records each accepted change in `route.json`.
 
 ## Required body sections
 

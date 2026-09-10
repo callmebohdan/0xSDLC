@@ -5,7 +5,7 @@ This is the operating procedure shared by every 0xSDLC subagent. The active suba
 ## Before acting
 
 1. Confirm the task ID, repository root, current phase, and requested output artifact.
-2. Read root `AGENTS.md`.
+2. Read root `AGENTS.md` when present. If absent, read task-local `project-context.md`; do not invent project commands or conventions.
 3. Read the phase contract, the output template, and the listed input artifacts.
 4. Inspect the repository state before making assumptions. Check the current branch, working-tree changes, relevant files, and available commands when the phase requires it.
 5. Identify the task boundary: what is included, explicitly excluded, and potentially affected indirectly.

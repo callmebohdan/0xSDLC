@@ -1,11 +1,14 @@
 ---
-schema_version: "0.1"
+schema_version: "0.2"
 task_id: "{{task_id}}"
 phase: "audit"
 status: "ready"
 agent: "auditor"
 inputs: ["brief.md", "spec.md"]
 assumptions: []
+risk_level: "low" # low | medium | high
+route_add: [] # optional: design, approval
+route_reason: ""
 ---
 
 # Repository audit
