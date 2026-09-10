@@ -5,7 +5,7 @@
 ```text
 user request
     ↓
-intake / route classifier
+route classifier + deterministic brief
     ↓
 .agents/0xsdlc/sessions/<task-id>/route.json + brief.md
     ↓
@@ -24,7 +24,7 @@ Owns task identity, artifact locations, route choice, phase order, current statu
 
 ### Subagent contract
 
-Owns one bounded transformation: specify, audit, design, plan, implement, test, review, verify, or fix. Quality assurance remains an optional release/compliance gate, not a default phase. Each agent reads listed inputs, follows shared guardrails, and writes the named output artifact.
+Owns one bounded transformation: specify, audit, design, plan, implement, test, review, verify, or fix. Quality assurance remains an optional release/compliance gate, not a default phase. Design is conditional, not a mandatory ceremony. Each agent reads listed inputs, follows shared guardrails, and writes the named output artifact.
 
 ### Adapter
 
@@ -33,6 +33,10 @@ Translates a generic prompt packet into a provider-specific CLI or API call. It 
 ### Human
 
 Owns ambiguous product decisions, high-impact approvals, accepted residual risks, merge/release decisions, and any action the repository policy reserves for a person.
+
+## Runner modules
+
+The canonical public entry point is `scripts/0xSDLC.py`. Internal responsibilities are separated under `scripts/sdlc_core/`: CLI/workspace resolution, routing/migration, artifact validation, atomic storage/locking, prompt assembly, provider profiles, execution, telemetry, and project bootstrap. This is an internal boundary, not a requirement for provider adapters.
 
 ## Why files instead of shared memory
 
@@ -53,15 +57,16 @@ Never substitute a global contract for project-specific instructions. Project ru
 ## State transitions
 
 ```text
-prepared → running → artifact-ready
-                    ↘ blocked
-                    ↘ needs-review
-                    ↘ failed
-artifact-ready → next phase
-verification → verified | needs-review | blocked
+pending → running → succeeded → next phase
+                 ↘ blocked
+                 ↘ needs-approval
+
+review(fix) → fix → test → review
+review(needs-review) → human decision
+verification → completed | needs-review | blocked
 ```
 
-State changes must be reflected in the route/artifact and supported by evidence. A model response without a durable artifact is not a completed phase.
+State changes must be reflected atomically in `route.json` and supported by a valid artifact. A model response without a durable artifact is not a completed phase. Parallel audit/review lanes add a distinct synthesis artifact before their conclusions influence routing.
 
 ## Design tradeoffs
 

@@ -446,3 +446,33 @@ secrets.json
 secrets.yaml
 secrets.yml
 *.msp
+# Local secrets; keep reviewable examples versioned.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python caches, environments, coverage, and build output.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+# 0xSDLC runtime state belongs in the user-level agent directory.
+.agents/
+.0xsdlc.lock
+
+# Local editor and operating-system metadata.
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
+*.tmp

@@ -33,25 +33,27 @@ Set `0XSDLC_AGENTS_HOME` to make the orchestrator use another published copy. Th
 ## Dry-run first
 
 ```text
-python scripts\0xsdlc.py autopilot "Add CSV export to reports"
-python scripts\0xsdlc.py status
+python scripts\0xSDLC.py autopilot "Add CSV export to reports"
+python scripts\0xSDLC.py status
 ```
 
 Inspect `%USERPROFILE%\\.agents\\0xsdlc\\sessions\\<task-id>\\brief.md`, `route.json`, and the first prompt before execution.
 
-The single rollout command publishes both the runtime contracts and the Codex chat skills:
+The single rollout command publishes runtime contracts plus portable Codex, Claude Code, Cursor, and shared skill wrappers:
 
 ```text
 python scripts\\install.py --force
 ```
 
-On Windows, this installs contracts into `%USERPROFILE%\\.agents\\0xsdlc` and chat skills into `%USERPROFILE%\\.codex\\skills`. Use `--agents-dir` or `--skills-dir` only when you intentionally use custom locations. Use `--skip-codex-skills` for a contracts-only rollout.
+The default skill destinations are the user-level `.codex/skills`, `.claude/skills`, `.cursor/skills`, and `.agents/skills` directories. Provider-specific directory options support custom locations, and `--skills-dir` remains a backward-compatible alias for the Codex destination. Use `--skip-provider-skills` for a contracts-only rollout.
+
+Filesystem placement does not prove interactive discovery. Restart or rescan each host and run a harmless invocation before recording live conformance.
 
 ## Configure a provider
 
 ```powershell
 $env:0XSDLC_CODEX_COMMAND = 'codex exec --file {prompt_file}'
-python scripts\0xsdlc.py autopilot "Add CSV export to reports" --model codex --execute
+python scripts\0xSDLC.py autopilot "Add CSV export to reports" --model codex --execute
 ```
 
 Start with a harmless test task. Review the provider's tool permissions and command semantics before giving it write access.

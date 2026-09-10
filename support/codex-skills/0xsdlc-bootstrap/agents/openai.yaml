@@ -1,0 +1,4 @@
+interface:
+  display_name: "0xSDLC Bootstrap"
+  short_description: "Draft project AGENTS.md instructions"
+  default_prompt: "Use $0xsdlc-bootstrap to derive a reviewable AGENTS.md draft from this repository."

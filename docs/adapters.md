@@ -24,7 +24,7 @@ Example:
 
 ```powershell
 $env:0XSDLC_CODEX_COMMAND = 'codex exec --file {prompt_file}'
-python scripts\0xsdlc.py autopilot "Implement the requested change" --model codex --execute
+python scripts\0xSDLC.py autopilot "Implement the requested change" --model codex --execute
 ```
 
 Use the syntax supported by the installed provider version. The examples are shapes, not guarantees about every CLI release.

@@ -22,14 +22,36 @@ REQUIRED = [
     "support/0xSDLC-conventions/output-contract.md",
     "support/0xSDLC-conventions/evidence-and-status.md",
     "support/0xSDLC-conventions/boundaries.md",
-    "scripts/0xsdlc.py",
+    "support/0xSDLC-conventions/parallel-synthesis.md",
+    "docs/evaluation.md",
+    "docs/naming.md",
+    "docs/references.md",
+    "scripts/0xSDLC.py",
+    "scripts/sdlc_core/cli.py",
+    "scripts/sdlc_core/runner.py",
+    "scripts/sdlc_core/routing.py",
+    "scripts/sdlc_core/artifacts.py",
+    "scripts/sdlc_core/storage.py",
+    "scripts/sdlc_core/providers.py",
+    "scripts/sdlc_core/telemetry.py",
+    "scripts/sdlc_core/project.py",
+    "support/0xSDLC-bootstrap/bootstrap.md",
+    "support/skills/0xsdlc-autopilot/SKILL.md",
+    "support/skills/0xsdlc-agent/SKILL.md",
+    "support/skills/0xsdlc-bootstrap/SKILL.md",
+    "schemas/route.schema.json",
+    "schemas/artifact.schema.json",
+    "support/adapters/profiles/generic.json",
+    "support/adapters/profiles/codex.json",
+    "support/adapters/profiles/claude.json",
+    "support/adapters/profiles/cursor.json",
     "templates/agent-skill-tests/README.md",
     "templates/design.md",
 ]
 
 AGENT_PATHS = {
     "autopilot": "0xSDLC-autopilot/autopilot.md",
-    "intake": "support/0xSDLC-intake/intake.md",
+    "project-bootstrap": "support/0xSDLC-bootstrap/bootstrap.md",
     "specifier": "support/0xSDLC-spec/specification.md",
     "auditor": "support/0xSDLC-audit/audit.md",
     "architect": "0xSDLC-design/design.md",
@@ -66,6 +88,20 @@ def main() -> int:
                     errors.append(f"missing template: {path.relative_to(ROOT)}")
         except (OSError, json.JSONDecodeError) as exc:
             errors.append(f"invalid manifest: {exc}")
+    for relative in (
+        "schemas/route.schema.json",
+        "schemas/artifact.schema.json",
+        "support/adapters/profiles/generic.json",
+        "support/adapters/profiles/codex.json",
+        "support/adapters/profiles/claude.json",
+        "support/adapters/profiles/cursor.json",
+    ):
+        path = ROOT / relative
+        if path.exists():
+            try:
+                json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                errors.append(f"invalid JSON: {relative}: {exc}")
     if errors:
         print("Harness validation failed:")
         print("\n".join(f"- {error}" for error in errors))

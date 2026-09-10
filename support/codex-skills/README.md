@@ -1,5 +1,5 @@
-# Codex skill wrappers
+# Codex skill metadata
 
-These small wrappers make the canonical 0xSDLC contracts callable from Codex chat. They intentionally contain routing only; detailed behavior stays in the installed contracts under `%USERPROFILE%\\.agents\\0xsdlc`.
+Portable provider-neutral skill contracts live in `support/skills/`. This directory contains Codex-specific presentation metadata layered onto those skills during installation. Keeping metadata separate prevents Codex UI fields or invocation syntax from becoming part of the shared 0xSDLC contract.
 
-Install them with `scripts\\install.py --force`. Invoke `$0xsdlc-autopilot` for autonomous routing, or `$0xsdlc-agent` and name the phase you want, such as design, plan, implement, fix, or verify.
+`scripts/install.py --force` installs the portable wrappers for Codex, Claude Code, Cursor, and `.agents/skills`, then adds each available `agents/openai.yaml` file only to the Codex copy. Filesystem placement is structurally testable; interactive discovery still requires a host restart/rescan and harmless invocation.

@@ -9,3 +9,14 @@ This folder contains provider-specific translation contracts. The shared 0xSDLC 
 | Cursor/generic CLI | `0XSDLC_GENERIC_COMMAND` or provider-specific wrapper | `cursor.md` |
 
 Future Qwen, Llama, or other providers should add a small adapter contract and command mapping without copying the phase logic.
+
+## Capability profiles
+
+Machine-readable profiles under `profiles/` declare command configuration, skill discovery locations, read-only controls, parallel execution, and optional usage sidecars. The runner validates the declaration before selecting a provider. A profile documents capability; it does not prove that a CLI is installed, authenticated, or interactively discoverable.
+
+Provider conformance has two levels:
+
+1. Structural: profile schema, required capabilities, portable prompt/artifact contract, and wrapper placement tests.
+2. Live: installed CLI syntax, authentication, permissions, skill discovery after restart/rescan, and a harmless end-to-end task.
+
+Only structural conformance is suitable for automatic repository tests. Live conformance must run on the target machine and record its date and provider version.
