@@ -5,7 +5,7 @@
 Run:
 
 ```text
-python scripts\0xsdlc.py autopilot "Add CSV export to the reports page"
+python scripts\0xSDLC.py autopilot "Add CSV export to the reports page"
 ```
 
 The CLI creates `.agents/0xsdlc/sessions/<task-id>/brief.md`, `route.json`, and the first prompt packet. Inspect them before execution. The request is preserved verbatim; the route is a decision record, not hidden behavior.
@@ -13,7 +13,7 @@ The CLI creates `.agents/0xsdlc/sessions/<task-id>/brief.md`, `route.json`, and 
 ## 2. Select the route
 
 - Small: isolated, low-risk, obvious validation path.
-- Standard: feature or multi-file change requiring a specification, design, plan, tests, and review.
+- Standard: feature or multi-file change requiring a spec, plan, tasks, tests, and review.
 - High-risk: security, data, production, public API, migration, deletion, payment, or external side effect.
 
 When uncertain, choose the safer route. You can edit the route before execution if the decision was wrong, but record why.
@@ -34,7 +34,9 @@ Refresh context at phase boundaries. Do not carry an unbounded transcript forwar
 
 ## 4. Implement and test
 
-Implementation should be one task slice, not the entire plan. Testing should establish the baseline, exercise acceptance criteria, classify failures, and preserve unavailable or flaky checks. Review should be independent from implementation whenever practical. If review returns `decision: fix`, the orchestrator runs `fix → test → review` and records each attempt before verification.
+Implementation should be one task slice, not the entire plan. Testing should establish the baseline, exercise acceptance criteria, classify failures, and preserve unavailable or flaky checks. Review should be independent from implementation whenever practical.
+
+Project formatter, linter, compiler, static-analysis, sanitizer, and test configuration is authoritative. The runner selects only phase- and language-relevant engineering supplements. For architecture-heavy or reusable code, add `--maintainability-review`; it costs two model calls and is synthesized with the normal review before routing.
 
 ## 5. Handle failure
 

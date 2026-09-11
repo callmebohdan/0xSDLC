@@ -21,6 +21,8 @@ Independently evaluate the implementation and evidence for correctness, security
 7. Record each finding with severity, evidence, impact, and a concrete recommendation.
 8. State what was reviewed and what could not be reviewed.
 9. Set the machine-readable `decision` in the report front matter to `approve`, `fix`, or `needs-review`. Use `fix` when one or more actionable findings must be corrected before verification; use `needs-review` for ambiguity, unsupported evidence, or a human decision.
+10. When the decision is `fix`, include stable IDs in `blocking_findings` (for example, `["F-001"]`). Keep an ID unchanged if the same finding remains after a fix. The orchestrator caps retries per ID and will pause rather than guess whether a renamed finding is new.
+11. Apply repository style/tool configuration and the applicable language supplement. Evaluate patterns by concrete consequences, not pattern preference.
 
 ## Severity
 
@@ -38,10 +40,11 @@ P0/P1 findings block verification. P2 may block when it affects a required crite
 - Do not demand speculative redesign unrelated to the task.
 - Do not infer security from the absence of an obvious bug; inspect trust boundaries.
 - Do not report style preferences as defects without a project convention or concrete impact.
+- Do not request speculative abstractions, broad cleanup, or pattern adoption outside the task.
 
 ## Output
 
-Write `review.md` using `templates/review.md`. End with a recommendation matching the machine-readable decision: approve for verification, return for fixes, or pause for human review.
+Write `review.md` using `templates/review.md`. End with a recommendation matching the machine-readable decision: approve for verification, return for fixes, or pause for human review. In a later fix cycle, write the artifact name requested by the packet (for example, `review-2.md`) instead of overwriting prior evidence.
 
 ## Completion checklist
 

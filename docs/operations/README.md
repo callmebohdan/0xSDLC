@@ -19,7 +19,7 @@ Do not load every phase into every prompt. The active phase owns the current act
 ## Starting autopilot
 
 ```powershell
-python scripts\0xsdlc.py autopilot "Describe one bounded task"
+python scripts\0xSDLC.py autopilot "Describe one bounded task"
 ```
 
 Inspect the generated route and first prompt under `%USERPROFILE%\\.agents\\0xsdlc\\sessions\\<task-id>\\`. Use `--execute` only after the adapter and permissions are understood.

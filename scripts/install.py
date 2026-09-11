@@ -10,15 +10,16 @@ from pathlib import Path
 
 
 SOURCE = Path(__file__).resolve().parents[1]
-PORTABLE_SKILLS_SOURCE = SOURCE / "support" / "integrations" / "portable-skills"
+SKILLS_SOURCE = SOURCE / "support" / "integrations" / "portable-skills"
 CODEX_METADATA_SOURCE = SOURCE / "support" / "integrations" / "codex" / "metadata"
-SKILL_NAMES = ("0xsdlc-autopilot", "0xsdlc-agent")
+SKILL_NAMES = ("0xsdlc-autopilot", "0xsdlc-agent", "0xsdlc-bootstrap")
 PUBLISH_PATHS = [
     "AGENTS.md",
     "README.md",
     "docs",
     "support",
     "templates",
+    "schemas",
     "scripts",
     "coding-standards",
     "0xSDLC-autopilot",
@@ -28,21 +29,6 @@ PUBLISH_PATHS = [
     "0xSDLC-plan",
     "0xSDLC-verify",
     "orchestrator",
-]
-
-# Paths from pre-0.2 layouts. They are removed only from the explicitly selected
-# 0xSDLC installation target during --force; repository files are never touched.
-OBSOLETE_PATHS = [
-    "support/0xSDLC-audit",
-    "support/0xSDLC-intake",
-    "support/0xSDLC-quality",
-    "support/0xSDLC-review",
-    "support/0xSDLC-spec",
-    "support/0xSDLC-test",
-    "support/0xSDLC-conventions",
-    "support/codex-skills",
-    "run-instructions",
-    "templates/tasks.md",
 ]
 
 
@@ -64,17 +50,45 @@ def default_codex_skills() -> Path:
 
 
 def default_claude_skills() -> Path:
-    override = os.environ.get("CLAUDE_CONFIG_DIR")
-    return (Path(override).expanduser() if override else Path.home() / ".claude") / "skills"
+    return Path.home() / ".claude" / "skills"
 
 
 def default_cursor_skills() -> Path:
-    override = os.environ.get("CURSOR_CONFIG_DIR")
-    return (Path(override).expanduser() if override else Path.home() / ".cursor") / "skills"
+    return Path.home() / ".cursor" / "skills"
 
 
-def default_portable_skills() -> Path:
+def default_shared_skills() -> Path:
     return Path.home() / ".agents" / "skills"
+
+
+def remove_published_path(path: Path, root: Path) -> None:
+    """Remove one known published child without touching runtime sessions or siblings."""
+    root = root.resolve()
+    parent = path.parent.resolve()
+    if parent != root and not parent.is_relative_to(root):
+        raise ValueError(f"refusing to remove path outside publish root: {path}")
+    if path.is_symlink() or (hasattr(path, "is_junction") and path.is_junction()):
+        path.unlink()
+    elif path.is_dir():
+        shutil.rmtree(path)
+    elif path.exists():
+        path.unlink()
+
+
+def install_skills(source_root: Path, target: Path, force: bool, *, codex_metadata: bool = False) -> None:
+    target.mkdir(parents=True, exist_ok=True)
+    for name in SKILL_NAMES:
+        source = source_root / name
+        destination = target / name
+        if destination.exists() and not force:
+            raise FileExistsError(f"skill already exists: {destination}")
+        if force:
+            remove_published_path(destination, target)
+        shutil.copytree(source, destination)
+        if codex_metadata:
+            metadata = CODEX_METADATA_SOURCE / name
+            if metadata.is_dir():
+                shutil.copytree(metadata, destination / "agents", dirs_exist_ok=True)
 
 
 def main() -> int:
@@ -86,38 +100,27 @@ def main() -> int:
         help="contract directory (default: user-level .agents/0xsdlc)",
     )
     parser.add_argument(
-        "--codex-skills-dir",
         "--skills-dir",
         type=Path,
-        dest="codex_skills_dir",
-        default=default_codex_skills(),
-        help="Codex skill directory (default: user-level .codex/skills; --skills-dir is a compatibility alias)",
+        help="deprecated alias for --codex-skills-dir",
     )
-    parser.add_argument(
-        "--claude-skills-dir",
-        type=Path,
-        default=default_claude_skills(),
-        help="Claude Code skill directory (default: user-level .claude/skills)",
-    )
-    parser.add_argument(
-        "--cursor-skills-dir",
-        type=Path,
-        default=default_cursor_skills(),
-        help="Cursor skill directory (default: user-level .cursor/skills)",
-    )
+    parser.add_argument("--codex-skills-dir", type=Path, default=default_codex_skills())
+    parser.add_argument("--claude-skills-dir", type=Path, default=default_claude_skills())
+    parser.add_argument("--cursor-skills-dir", type=Path, default=default_cursor_skills())
     parser.add_argument(
         "--portable-skills-dir",
+        "--shared-skills-dir",
+        dest="portable_skills_dir",
         type=Path,
-        default=default_portable_skills(),
-        help="portable/Cursor-compatible skill directory (default: user-level .agents/skills)",
+        default=default_shared_skills(),
+        help="portable skill directory (default: user-level .agents/skills)",
     )
     parser.add_argument(
-        "--skip-provider-skills",
         "--skip-codex-skills",
-        dest="skip_provider_skills",
         action="store_true",
         help="publish only the 0xSDLC runtime contracts",
     )
+    parser.add_argument("--skip-provider-skills", action="store_true", help="publish contracts only; install no skill wrappers")
     parser.add_argument("--force", action="store_true", help="replace existing harness files")
     args = parser.parse_args()
     target = args.agents_dir.expanduser().resolve()
@@ -127,21 +130,15 @@ def main() -> int:
         print(f"- {target}", file=sys.stderr)
         print("Re-run with --force only after reviewing those paths.", file=sys.stderr)
         return 2
-    if args.force:
-        for relative in OBSOLETE_PATHS:
-            stale = target / relative
-            if stale.is_dir():
-                shutil.rmtree(stale)
-            elif stale.is_file() or stale.is_symlink():
-                stale.unlink()
     for relative in PUBLISH_PATHS:
         source = SOURCE / relative
         destination = target / relative
+        if args.force:
+            remove_published_path(destination, target)
         if source.is_dir():
             shutil.copytree(
                 source,
                 destination,
-                dirs_exist_ok=True,
                 ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
             )
         else:
@@ -149,30 +146,21 @@ def main() -> int:
             shutil.copy2(source, destination)
     print(f"Installed 0xSDLC into {target}")
     if not args.skip_provider_skills:
-        skill_targets = (
-            ("Codex", args.codex_skills_dir),
-            ("Claude Code", args.claude_skills_dir),
-            ("Cursor", args.cursor_skills_dir),
-            ("portable", args.portable_skills_dir),
-        )
-        for label, target_value in skill_targets:
-            skills_target = target_value.expanduser().resolve()
-            skills_target.mkdir(parents=True, exist_ok=True)
-            for name in SKILL_NAMES:
-                source = PORTABLE_SKILLS_SOURCE / name
-                destination = skills_target / name
-                if destination.exists() and not args.force:
-                    print(
-                        f"{label} skill already exists: {destination}. Re-run with --force to replace it.",
-                        file=sys.stderr,
-                    )
-                    return 2
-                shutil.copytree(source, destination, dirs_exist_ok=True)
-                if label == "Codex":
-                    metadata_source = CODEX_METADATA_SOURCE / name
-                    metadata_target = destination / "agents"
-                    shutil.copytree(metadata_source, metadata_target, dirs_exist_ok=True)
-            print(f"Installed 0xSDLC skills for {label} into {skills_target}")
+        codex_target = (args.skills_dir or args.codex_skills_dir).expanduser().resolve()
+        targets = [
+            ("Claude Code", args.claude_skills_dir.expanduser().resolve(), False),
+            ("Cursor", args.cursor_skills_dir.expanduser().resolve(), False),
+            ("portable", args.portable_skills_dir.expanduser().resolve(), False),
+        ]
+        if not args.skip_codex_skills:
+            targets.insert(0, ("Codex", codex_target, True))
+        try:
+            for label, skills_target, metadata in targets:
+                install_skills(SKILLS_SOURCE, skills_target, args.force, codex_metadata=metadata)
+                print(f"Installed 0xSDLC skills for {label} into {skills_target}")
+        except FileExistsError as exc:
+            print(f"Install stopped; {exc}. Re-run with --force to replace it.", file=sys.stderr)
+            return 2
     return 0
 
 

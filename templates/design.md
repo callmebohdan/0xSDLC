@@ -1,5 +1,5 @@
 ---
-schema_version: "0.1"
+schema_version: "0.2"
 task_id: "{{task_id}}"
 phase: "design"
 status: "ready"
@@ -30,6 +30,11 @@ assumptions: []
 | Option | Benefit | Cost/risk | Decision |
 | --- | --- | --- | --- |
 
+## Abstractions and design patterns
+
+| Abstraction/pattern | Concrete need | Simpler alternative | Added cost | Current consumer/test seam |
+| --- | --- | --- | --- | --- |
+
 ## Boundaries and risks
 
 - Security/privacy:
@@ -37,6 +42,7 @@ assumptions: []
 - Performance/concurrency:
 - Migration/deployment:
 - Human approval required:
+- Maintainability/scaling dimensions:
 
 ## Evidence and handoff
 

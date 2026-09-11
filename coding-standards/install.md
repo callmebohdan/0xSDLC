@@ -23,8 +23,8 @@ python Scripts\validate_harness.py
 ## Run a supervised dry-run
 
 ```powershell
-python Scripts\0xsdlc.py autopilot "Describe one bounded task"
-python Scripts\0xsdlc.py status
+python scripts\0xSDLC.py autopilot "Describe one bounded task"
+python scripts\0xSDLC.py status
 ```
 
 Inspect `.agents/0xsdlc/sessions/<task-id>/` before enabling adapter execution.

@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # 0xSDLC autopilot
 
-Use the installed canonical contract at the user-level `.agents/0xsdlc/0xSDLC-autopilot/autopilot.md` (Windows: `%USERPROFILE%\\.agents\\0xsdlc\\0xSDLC-autopilot\\autopilot.md`) and the relevant phase contracts under the same directory. Treat the user's task specification and the current repository's `AGENTS.md` as authoritative.
+Use the installed canonical contract at the user-level `.agents/0xsdlc/0xSDLC-autopilot/autopilot.md` (Windows: `%USERPROFILE%\\.agents\\0xsdlc\\0xSDLC-autopilot\\autopilot.md`) and the relevant phase contracts under the same directory. Treat the user's task specification and the current repository's `AGENTS.md` as authoritative. If `AGENTS.md` is absent, use task-local project context and suggest `$0xsdlc-bootstrap` or `/0xsdlc-bootstrap`; do not create permanent instructions silently.
 
 Create or update durable evidence only under the user-level `.agents/0xsdlc/sessions/YYYY-MM-DD_short-description_XXXXXXXX/` directory. Keep the current repository's source tree focused on the requested change. Choose the smallest safe route, preserve evidence, stop at approval gates or missing proof, and never claim verification without commands or other concrete evidence.
 

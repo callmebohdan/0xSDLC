@@ -23,11 +23,12 @@ Implement one assigned task slice from `plan.md`, preserving the specification, 
 
 1. Make the smallest coherent change that satisfies the task.
 2. Reuse established patterns for naming, errors, logging, configuration, and tests.
-3. Preserve public behavior outside the stated change.
-4. Add or update focused tests for new behavior, edge cases, and regressions.
-5. Handle invalid input, empty state, retries, permissions, and partial failure where relevant.
-6. Run formatting, type-checking, linting, unit tests, or the narrowest relevant checks.
-7. Inspect the final diff for accidental files, debug output, secrets, scope drift, and generated-file changes.
+3. Apply project tooling and the applicable language supplement. Prefer formatter, compiler, linter, static analysis, sanitizer, and test evidence over subjective style claims.
+4. Preserve public behavior outside the stated change.
+5. Add or update focused tests for new behavior, edge cases, and regressions.
+6. Handle invalid input, empty state, retries, permissions, and partial failure where relevant.
+7. Run formatting, type-checking, linting, unit tests, or the narrowest relevant checks.
+8. Inspect the final diff for accidental files, debug output, secrets, scope drift, and generated-file changes.
 
 ## Guardrails
 
@@ -35,6 +36,7 @@ Implement one assigned task slice from `plan.md`, preserving the specification, 
 - Do not add dependencies, migrations, CI changes, or public contract changes without approval.
 - Do not delete a failing test or weaken an assertion to pass.
 - Do not rewrite unrelated code for style consistency.
+- Do not add an interface, layer, or design pattern for hypothetical reuse; record the concrete present need.
 - Do not hand-edit generated code unless the repository explicitly requires it.
 - Do not claim a test passed if it was skipped or blocked.
 - If the baseline is failing, reproduce and record it before attributing failures to your change.

@@ -89,7 +89,7 @@ The core contracts do not depend on a vendor SDK. Codex, Claude, Cursor, Qwen, L
 
 It already provides repeatable workflows, phase boundaries, structured artifacts, risk-based routing, approval gates, resumable routes, evidence checks, bounded recovery, and optional independent audit/review lanes.
 
-It is not yet a full L3/L4 platform. Important future work includes measured token budgets, crash-safe concurrency, provider health and cancellation, policy-enforced tool permissions, stable finding deduplication, and stronger synthesis of parallel results.
+It is not yet a full L3/L4 platform. The runner already has versioned route and artifact schemas, atomic task locking, interrupted-run recovery, dynamic route events, cost/call telemetry, provider capability profiles, project bootstrap, and explicit synthesis of parallel evidence. The remaining path to L3 is operational proof: cross-provider conformance, representative evaluations, measured quality/cost thresholds, provider health and cancellation, and policy-enforced tool permissions.
 
 ## Repository layout
 
@@ -157,7 +157,7 @@ Claude Code can use the same contracts through the CLI adapter:
 
 ```powershell
 $env:0XSDLC_CLAUDE_COMMAND = 'claude --print --prompt-file {prompt_file}'
-python scripts\\0xsdlc.py autopilot "Add CSV export to the reports page" --model claude --execute --full
+python scripts\\0xSDLC.py autopilot "Add CSV export to the reports page" --model claude --execute --full
 ```
 
 After installation, invoke `/0xsdlc-autopilot` or `/0xsdlc-agent` in Claude Code. Claude Code discovers the portable `SKILL.md` wrappers from `%USERPROFILE%\\.claude\\skills`; the wrappers then load the canonical contracts from `%USERPROFILE%\\.agents\\0xsdlc`.
@@ -168,7 +168,7 @@ Cursor can use the generated prompt interactively or through a local bridge/CLI:
 
 ```powershell
 $env:0XSDLC_CURSOR_COMMAND = '<your Cursor bridge> {prompt_file}'
-python scripts\\0xsdlc.py autopilot "Add CSV export to the reports page" --model cursor --execute --full
+python scripts\\0xSDLC.py autopilot "Add CSV export to the reports page" --model cursor --execute --full
 ```
 
 After installation, invoke `/0xsdlc-autopilot` or `/0xsdlc-agent` in Cursor. Cursor discovers user-level skills from `%USERPROFILE%\\.cursor\\skills` and the compatible `%USERPROFILE%\\.agents\\skills` location. Project-local installations can use `.cursor/skills/` when a workflow should travel with a repository.
@@ -179,7 +179,7 @@ Qwen, Llama, Kiwi, and future providers use the same adapter boundary:
 
 ```powershell
 $env:0XSDLC_QWEN_COMMAND = '<provider command> {prompt_file}'
-python scripts\\0xsdlc.py autopilot "Describe the change" --model qwen --execute --full
+python scripts\\0xSDLC.py autopilot "Describe the change" --model qwen --execute --full
 ```
 
 Use the provider’s actual command syntax and keep credentials outside the repository. Every provider still receives the same phase contracts, route state, artifact schema, and safety rules.
@@ -189,7 +189,7 @@ Use the provider’s actual command syntax and keep credentials outside the repo
 To create a route and prompt packet without calling a model:
 
 ```powershell
-python scripts\\0xsdlc.py autopilot "Describe the change you want"
+python scripts\\0xSDLC.py autopilot "Describe the change you want"
 ```
 
 See [AI readiness](docs/ai-readiness.md), [architecture](docs/architecture.md), [Git integration](docs/integrations/git.md), and [the agent library](docs/agent-library.md) for details.

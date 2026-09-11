@@ -8,13 +8,12 @@ The library is deliberately model-neutral. A provider adapter may translate thes
 
 The orchestrator and every model session should load only the smallest useful context:
 
-1. Read the repository's root `AGENTS.md`.
+1. Read the repository's root `AGENTS.md` when present. Otherwise use the task-local project context and consider the bootstrap agent for recurring work.
 2. Read `support/conventions/phase-protocol.md` and `support/conventions/boundaries.md` once for the current task.
 3. Read the current subagent contract from the relevant root-level `0xSDLC-*` folder.
 4. Read the current task brief and only the artifacts listed by that contract.
 5. Read the relevant template in `templates/` before writing the output artifact.
 6. Read `support/conventions/evidence-and-status.md` before declaring a result.
-7. For a version-control handoff, read `support/conventions/version-control.md` and use `templates/pull-request.md`; this does not authorize remote Git actions.
 
 Do not paste the entire library into every prompt. The common contracts are reusable rules; the phase contract is the active instruction; the task artifacts are the current state.
 
@@ -22,7 +21,7 @@ Do not paste the entire library into every prompt. The common contracts are reus
 
 | Phase | Agent | Primary question | Required output |
 | --- | --- | --- | --- |
-| Specify | `specifier` | What observable behavior defines success? | `spec.md` |
+| Specify | `specifier` | What outcome, boundary, and observable behavior define success? | `spec.md` |
 | Audit | `auditor` | What does this repository already provide, and what constraints matter? | `audit.md` |
 | Design | `architect` | What is the smallest safe technical design? | `design.md` |
 | Plan | `task-planner` | What are the smallest verifiable implementation slices? | `plan.md` |
@@ -32,7 +31,7 @@ Do not paste the entire library into every prompt. The common contracts are reus
 | Verify | `verifier` | Can every acceptance criterion be proven? | `verification.md` |
 | Fix | `fixer` | What is the smallest evidence-backed correction? | `fix-report.md` |
 
-The default workflow is sequential. Intake is deliberately folded into the generated brief and specification; it is not a separate model phase. Parallel work is allowed only for tasks explicitly marked independent and only when separate workspaces or non-overlapping files prevent lost updates.
+The default workflow is sequential. `brief.md` is created deterministically, so intake is folded into specification rather than run as a default model phase. Parallel audit/review is opt-in and requires a separate synthesis artifact; implementation work may be parallel only with non-overlapping files or separate workspaces.
 
 ## Artifact rules
 

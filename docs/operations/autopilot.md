@@ -18,6 +18,8 @@ python scripts/0xSDLC-autopilot.py "Add CSV export to the reports page" --model 
 
 `--full` is deliberately opt-in and requires `--execute`. The runner stops at approval gates, adapter failures, or missing required phase artifacts. The detailed agent contract is [`0xSDLC-autopilot/autopilot.md`](../../0xSDLC-autopilot/autopilot.md).
 
+For architecture-heavy or reusable code, add `--maintainability-review`. It runs one focused review beside the normal review and synthesizes both before routing, adding two model calls. Use deterministic project formatters and analyzers for mechanical style instead.
+
 ## Inputs
 
 - A concise user request.
@@ -41,7 +43,7 @@ Examples: a typo, a focused unit test, a local error-message correction, or a sm
 
 Use when the task affects several files, has incomplete acceptance criteria, touches an integration point, or needs independent review.
 
-`specify → audit → design → plan → implement → test → review → verify`
+`specify → audit → [design] → plan → implement → test → review → verify`
 
 Examples: a new feature, a UI/API change, a persistent setting, or a cross-module refactor.
 
@@ -64,13 +66,13 @@ The approval phase must name the exact action, blast radius, rollback plan, and 
 7. Run one phase at a time. Persist its output before starting the next phase.
 8. On `blocked` or `needs-review`, stop. Do not automatically skip the phase.
 9. On a failed test or review finding, create a bounded fix loop. Reproduce the finding before changing code.
-10. If review returns `fix`, run `fix → test → review` and preserve each bounded fix report. End with `verification.md` and a final status of `verified`, `needs-review`, or `blocked`.
+10. If review returns `fix`, require stable finding IDs, then run `fix → test → review` and preserve every numbered report. Stop after two attempts per finding or four total fixes. End with `verification.md` and a final status of `verified`, `needs-review`, or `blocked`.
 
 ## Retry and loop limits
 
 - Retry an adapter only for a transient infrastructure failure, and record the retry.
 - Do not repeat an identical prompt after a product failure; change the context, task slice, or contract.
-- After two unsuccessful fixes for the same finding, stop for human review.
+- After two unsuccessful fixes for the same stable finding or four total fixes, stop for human review.
 - Never turn a timeout into success.
 - Never advance because a model returned text; advance because the required artifact and evidence exist.
 

@@ -1,0 +1,8 @@
+{
+  "schema_version": "0.1",
+  "name": "claude",
+  "command_env": "0XSDLC_CLAUDE_COMMAND",
+  "capabilities": {"prompt_file": true, "workspace": true, "artifact_output": true, "parallel_processes": true, "read_only_mode": "host-permissions", "usage_sidecar": false},
+  "skill_locations": ["~/.claude/skills", "~/.agents/skills"],
+  "notes": "Validate the installed Claude Code CLI syntax and restart or rescan before claiming interactive skill discovery."
+}

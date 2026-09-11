@@ -1,59 +1,59 @@
-# 0xSDLC autopilot
+# 0xSDLC autopilot contract
 
 ## Mission
 
-Route one engineering request through the smallest safe spec-driven development cycle. Autopilot coordinates the phase agents; it does not replace their contracts, invent requirements, or silently approve risky work.
+Route one engineering request through the smallest safe, evidence-backed development cycle. Autopilot coordinates focused phases; it does not invent requirements, treat model text as proof, or convert a user request into permission for sensitive changes.
 
-## Invocation
+## Route rules
 
-Use the portable Python entry point from the repository root:
+| Route | Phases | Use when |
+| --- | --- | --- |
+| Small | audit → plan → implement → test → review → verify | isolated, reversible work with an existing pattern |
+| Standard | specify → audit → [design] → plan → implement → test → review → verify | normal feature, defect, or multi-file change |
+| High-risk | specify → audit → design → plan → approval → implement → test → review → verify | security, data, production, public contract, payment, migration, deletion, or other irreversible impact |
 
-```text
-python scripts/0xSDLC-autopilot.py "Add CSV export to the report page"
-python scripts/0xSDLC-autopilot.py "Add CSV export to the report page" --model codex --execute --full
-python scripts/0xsdlc.py autopilot "..." --kind high-risk
-```
+The bracketed design phase is a decision record, not ceremony. Include it for architecture, integrations, cross-module behavior, data/control-flow changes, material alternatives, or uncertain compatibility. Omit it when audit and plan can safely describe one obvious local change. The user may force either choice for non-high-risk work; high-risk work always includes design.
 
-The first form prepares a route and the first prompt without calling a model. The `--execute --full` form runs every eligible phase through the configured adapter. `--full` requires `--execute`; this prevents an accidental claim that a cycle ran when it only produced prompt packets.
+Fold intake into `specify`: the brief is captured deterministically and the specifier clarifies outcome, actors, acceptance criteria, boundaries, and unknowns. The legacy intake contract is not part of a normal route.
 
-Adapters are selected with `--model auto|generic|codex|claude|qwen|llama|kiwi` and configured through `0XSDLC_<MODEL>_COMMAND`. The command receives `{prompt_file}`, `{workspace}`, `{output_dir}`, and `{task_id}` placeholders. Adapter details belong in `support/adapters/`; phase contracts remain model-neutral.
+## Task state
 
-## Default routing
+1. Create exactly one directory under `%USERPROFILE%\.agents\0xsdlc\sessions\YYYY-MM-DD_short-description_8hex`.
+2. Persist the verbatim request in `brief.md` and route, rationale, phase state, approvals, attempts, and events in `route.json` before any adapter call.
+3. Each phase writes the requested Markdown artifact with `task_id`, `phase`, and controlled `status` front matter. A missing or invalid artifact blocks the route.
+4. State transitions are recorded atomically. Valid phase states are `pending`, `running`, `succeeded`, `blocked`, `needs-approval`, and `skipped`.
+5. Resume from the same directory. Do not recreate or overwrite prior artifacts to make a route appear clean.
 
-Autopilot classifies the request unless `--kind` is supplied:
+Route schema `0.4` and artifact schema `0.2` are current. Existing route `0.2`/`0.3` and artifact `0.1` state remains readable through explicit migration rules. Unknown schema versions stop instead of being guessed into compatibility.
 
-| Kind | Route | Use when |
-|---|---|---|
-| `small` | audit → plan → implement → test → verify | A bounded, low-risk change |
-| `standard` | specify → audit → design → plan → implement → test → review → verify | The normal feature or fix |
-| `high-risk` | standard route with approval before implementation | Security, credentials, migrations, production, billing, deletion, or public API impact |
+## Execution and stop rules
 
-Classification is a starting decision record, not a waiver. The audit or review agent may identify a reason to stop, narrow scope, or require a human gate.
+- Load current phase contract, brief, route, project `AGENTS.md`, listed artifacts, and only relevant source. Do not paste the whole library or conversation into every prompt.
+- Run one phase at a time and preserve adapter stdout/stderr. Record commands, paths, result summaries, assumptions, and limitations.
+- A phase reports `blocked` when it cannot proceed safely; `needs-review` when a human choice or approval is required. Autopilot stops in both cases.
+- For high-risk or explicitly gated work, stop after plan/design. A human approval states scope and constraints; silence is not approval.
+- Test proves behavior at a chosen level. Review independently searches for defects and weak evidence. Verify maps each required acceptance criterion to current evidence; neither test nor review alone is final verification.
+- Audit, design, or plan evidence may add a safer `design` or `approval` phase. Every accepted route change records its source and reason; agents may not dynamically remove a required gate.
+- Full execution owns an exclusive task lock. Resume marks any orphaned `running` phase as interrupted, preserves that event, and retries only through a valid state transition.
 
-## Full-cycle rules
+## Review and fix loop
 
-1. Create one task directory under the user-level `.agents/0xsdlc/sessions/` named `YYYY-MM-DD_short-description_XXXXXXXX`, where `XXXXXXXX` is an eight-character lowercase hexadecimal uniqueness suffix.
-2. Preserve the request verbatim in `brief.md` and record classification, model, phases, gates, and status in `route.json`.
-3. Before each phase, load only the current phase contract, the brief, route, relevant prior artifacts, and shared boundaries. Keep context small.
-4. Run phases in route order. Each phase must write its named artifact: `spec.md`, `audit.md`, `design.md`, `plan.md`, `implementation.md`, `test-report.md`, `review.md`, `verification.md`, or a bounded `fix-report-<attempt>.md`.
-5. Record every phase transition in `route.json`. A phase moves through `pending → running → succeeded`; failures become `blocked`, and human gates become `needs-approval`. Stop with status `needs-approval` at a human gate, `blocked` on adapter failure or missing required proof, and `completed` only after the final verification artifact exists.
-6. Never convert a command exit code, model response, or plausible reasoning into proof. Evidence must name commands, files, tests, diffs, or an explicit human decision.
-7. A failed phase is not retried indefinitely. Review findings with decision `fix` enter `fix → test → review`; preserve every report, select one stable finding ID per fix attempt, stop after two attempts for the same finding, and cap the whole recovery cycle at four attempts.
+`review.md` uses `decision: approve | fix | needs-review`. A `fix` decision must name stable `blocking_findings` IDs. Autopilot runs `fix → test → review`, retaining `fix-report-1.md`, `test-report-1.md`, `review-1.md`, and later attempts rather than overwriting history.
 
-## Optional parallel checks
+It allows two attempts per stable finding and four attempts per route. If stable IDs are missing, a finding persists past its cap, or the reviewer asks for a human decision, autopilot ends at `needs-review`. It never repeats a product failure with an unchanged prompt.
 
-`--parallel-checks` launches an independent secondary audit and an independent secondary review lane. It is opt-in because it consumes approximately two additional model calls per cycle, and therefore should be reserved for high-uncertainty or high-impact changes. Secondary artifacts are `audit-secondary.md` and `review-secondary.md`; disagreement is evidence for review, not permission to choose the more convenient result.
+## Parallel checks
 
-## Human gates and autonomy
+`--parallel-checks` is opt-in. It adds an independent audit lane and review lane, then a separate synthesis call for each pair. The synthesis reconciles disagreement, keeps the stricter evidence-backed conclusion, and records whether the extra call changed confidence. This costs four extra model calls; reserve it for high-impact or high-uncertainty work.
 
-Autopilot may inspect the repository, prepare specifications, plan, make scoped local edits, and run local checks when the task and existing permissions allow it. It must pause for secrets, production actions, destructive operations, migrations, public API changes, dependency or CI changes, unresolved product decisions, or any boundary marked `Ask first` in `support/conventions/boundaries.md`.
+`--maintainability-review` is a narrower opt-in. It adds one focused review lane plus synthesis, costing two extra calls. Use it for reusable libraries, architectural changes, public interfaces, performance/concurrency-sensitive code, or explicit maintainability concerns. It is not a formatting agent: deterministic project tools handle mechanical style. When combined with `--parallel-checks`, all three review reports share one synthesis, for five extra calls across the route rather than six.
 
-For a high-risk route, approval is recorded before implementation. Approval must identify the person or system decision, the approved scope, and any constraints. No agent may infer approval from silence.
+## Engineering practices
 
-## Recovery and resume
+Project instructions, checked-in tooling, and established local conventions remain authoritative. The runner records a bounded project profile for every task and selectively loads generic maintainability/architecture guidance plus applicable language profiles. It must not inject the entire practice library, impose one company's style guide, or turn a scoped task into a broad cleanup.
 
-To resume, inspect `route.json`, the latest phase artifact, adapter transcripts, and unresolved risks. Do not recreate the task directory or overwrite earlier evidence. Re-run only the blocked phase after its cause is addressed, then continue in route order. If requirements changed, create a new task or record an explicit spec revision.
+## Boundaries
 
-## Completion report
+Autopilot may inspect, specify, plan, make scoped local changes, and run local checks when allowed. It pauses for every `Ask before doing` boundary in [`boundaries.md`](../support/conventions/boundaries.md), including secrets, external data transfer, dependencies, CI/release, migrations, public contracts, destructive operations, and commits. More restrictive project instructions win.
 
-Autopilot reports the task directory, route, final status, completed phases, commands invoked, artifacts produced, approvals, failures, and remaining risks. It must distinguish `prepared`, `running`, `needs-approval`, `blocked`, `phase-completed`, and `completed`; only a `verification.md` artifact with evidence can support a verified claim.
+If the target repository has no `AGENTS.md`, create task-local project context from observable files and continue when safe. Use the separate project-bootstrap agent to propose permanent instructions; adopting that draft requires explicit human approval and must never overwrite an existing file automatically.
