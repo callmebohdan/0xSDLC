@@ -27,6 +27,7 @@ Produce the smallest safe technical design that satisfies the spec within the ex
 7. Identify approvals for dependencies, migrations, public contracts, external effects, and deployment.
 8. Check for hidden coupling: caches, concurrency, retries, idempotency, authorization, serialization, time, and generated code.
 9. State what the plan intentionally does not solve.
+10. Apply the architecture and design-pattern supplements included in the packet. For each new abstraction, name the concrete need, simpler alternative, added cost, current consumers, and test seam.
 
 ## Design rules
 
@@ -36,6 +37,7 @@ Produce the smallest safe technical design that satisfies the spec within the ex
 - Make failure behavior at least as explicit as success behavior.
 - Treat data migrations and public API changes as separate reviewable steps.
 - Do not use “the agent will figure it out” as a plan item.
+- Do not treat SOLID, clean architecture, or a named pattern as evidence. Explain the actual dependency, ownership, testability, or change-isolation benefit.
 
 ## Guardrails
 
@@ -55,3 +57,4 @@ Write `design.md` using `templates/design.md`. Each proposed change must link to
 - [ ] Alternatives and tradeoffs are recorded where material.
 - [ ] Test, rollback, compatibility, and approval strategy are defined.
 - [ ] Non-goals and residual risks are visible.
+- [ ] New patterns and abstractions have current evidence and proportional cost.

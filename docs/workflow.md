@@ -36,6 +36,8 @@ Refresh context at phase boundaries. Do not carry an unbounded transcript forwar
 
 Implementation should be one task slice, not the entire plan. Testing should establish the baseline, exercise acceptance criteria, classify failures, and preserve unavailable or flaky checks. Review should be independent from implementation whenever practical.
 
+Project formatter, linter, compiler, static-analysis, sanitizer, and test configuration is authoritative. The runner selects only phase- and language-relevant engineering supplements. For architecture-heavy or reusable code, add `--maintainability-review`; it costs two model calls and is synthesized with the normal review before routing.
+
 ## 5. Handle failure
 
 - Missing input or permission: `blocked`.

@@ -9,7 +9,7 @@ from .config import ROUTE_SCHEMA_VERSION
 
 ROUTE_REQUIRED = {
     "schema_version", "task_id", "request", "workspace", "classification", "model",
-    "status", "current_phase", "phases", "phase_states", "events", "created_at",
+    "status", "current_phase", "phases", "routing", "phase_states", "events", "created_at",
 }
 
 
@@ -25,6 +25,10 @@ def validate_route(route: dict[str, Any]) -> None:
         raise ValueError("route phases must be a non-empty list")
     if route["current_phase"] not in route["phase_states"]:
         raise ValueError("current phase is absent from phase_states")
+    routing = route["routing"]
+    for field in ("design", "approval", "maintainability_review"):
+        if not isinstance(routing.get(field), bool):
+            raise ValueError(f"route routing.{field} must be boolean")
     for phase in route["phases"]:
         if phase not in route["phase_states"]:
             raise ValueError(f"phase has no state: {phase}")

@@ -19,7 +19,8 @@ Produce an honest test report for the implemented slice against the specificatio
 5. Add a focused test only when it makes a requirement executable or prevents a regression.
 6. Classify every failure using `evidence-and-status.md`.
 7. Record skipped tests, unavailable services, flaky observations, timeouts, and environmental limitations.
-8. Recommend `ready`, `needs-review`, or `blocked` based on evidence.
+8. For C++ and other systems code, run configured compiler diagnostics and relevant sanitizer/static-analysis targets when the changed risk warrants them; record configuration and platform limitations.
+9. Recommend `ready`, `needs-review`, or `blocked` based on evidence.
 
 ## Test selection rules
 

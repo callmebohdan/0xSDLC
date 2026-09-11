@@ -10,6 +10,7 @@ L3 changes how often the user steers execution, not who owns consequential decis
 | Standard autopilot | phases continue until completion, failure, or gate | ordinary local engineering work |
 | Gated autopilot | planning completes, then implementation waits | sensitive, expensive, irreversible, or ambiguous work |
 | Manual phase | user invokes one named agent | focused design, plan, review, fix, or verification |
+| Maintainability review | normal review plus a focused engineering-quality lane and synthesis | architecture, reusable libraries, public interfaces, concurrency, or performance risk |
 
 ## When a human acts
 
@@ -20,6 +21,8 @@ L3 changes how often the user steers execution, not who owns consequential decis
 - Residual security, privacy, reliability, performance, or data-loss risk needs acceptance.
 
 At a gate, show proposed scope, reason, risks, changes, validation plan, rollback, and estimated extra calls. Approval is explicit and durable. Resume records it in `approval.md` and `route.json`; silence is not approval.
+
+The maintainability lane is opt-in with `--maintainability-review` and adds two model calls. It does not add a human gate unless its synthesized findings require a fix or unresolved design decision.
 
 ## Background behavior
 

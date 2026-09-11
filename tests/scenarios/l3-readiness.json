@@ -9,6 +9,7 @@
     {"id": "invalid-artifact", "expected": "blocked", "proves": ["artifact schema enforcement"]},
     {"id": "fix-loop", "expected": "completed", "proves": ["stable finding ID", "numbered history", "retest and rereview"]},
     {"id": "interrupted", "expected": "completed", "proves": ["orphaned running recovery"]},
-    {"id": "dynamic-route", "expected": "needs-approval", "proves": ["evidence-driven route change", "reason event"]}
+    {"id": "dynamic-route", "expected": "needs-approval", "proves": ["evidence-driven route change", "reason event"]},
+    {"id": "maintainability-review", "expected": "completed", "proves": ["language profile selection", "focused review lane", "shared synthesis", "call-count telemetry"]}
   ]
 }

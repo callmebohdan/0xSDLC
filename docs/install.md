@@ -58,6 +58,8 @@ python scripts\0xSDLC.py autopilot "Add CSV export to reports" --model codex --e
 
 Start with a harmless test task. Review the provider's tool permissions and command semantics before giving it write access.
 
+Engineering-practice supplements are published with the runtime contracts. They are selected automatically by phase and detected language. `--maintainability-review` also requires a provider profile with parallel-process capability because it runs beside the primary review.
+
 ## Validation
 
 ```text

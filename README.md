@@ -9,6 +9,7 @@ The harness uses Markdown contracts and dependency-free Python. A task remains p
 - **Less drift:** `spec.md` captures behavior and acceptance criteria before implementation; code does not silently redefine the request.
 - **Cheaper context:** each phase loads its own contract and only relevant evidence. Completed work is handed off through files, not a growing transcript.
 - **Honest completion:** test, review, and final verification are distinct decisions. The runner stops on invalid artifacts, missing evidence, failing adapters, and approval gates.
+- **Maintainable implementation:** project rules remain authoritative while selectively loaded engineering and language profiles cover architecture, ownership, patterns, and deterministic quality checks.
 - **Controlled autonomy:** autopilot chooses a minimal route, while sensitive work waits for an explicit human decision.
 - **Provider freedom:** adapters change invocation syntax, not requirements, artifact schemas, or safeguards.
 
@@ -60,11 +61,11 @@ For a repository without project instructions, prepare a reviewable draft withou
 python scripts\0xSDLC.py bootstrap --workspace C:\path\to\project
 ```
 
-See [installation and provider use](docs/install.md), [workflow](docs/workflow.md), [architecture](docs/architecture.md), [human interaction](docs/human-interaction.md), [naming and compatibility](docs/naming.md), and [L3 migration](docs/l3-migration.md) for operating details.
+See [installation and provider use](docs/install.md), [workflow](docs/workflow.md), [architecture](docs/architecture.md), [engineering quality](docs/engineering-quality.md), [human interaction](docs/human-interaction.md), [naming and compatibility](docs/naming.md), and [L3 migration](docs/l3-migration.md) for operating details.
 
 ## Cost policy
 
-The sequential route is the normal route: one call per applicable phase. Do not add agents because they sound sophisticated. `--parallel-checks` adds an independent audit and review plus a synthesis after each pair, adding four model calls. Use it only for high uncertainty or high impact; two opinions without reconciliation are not meaningful validation.
+The sequential route is the normal route: one call per applicable phase. Do not add agents because they sound sophisticated. `--maintainability-review` adds a focused review and synthesis (two calls). `--parallel-checks` adds an independent audit and review plus synthesis (four calls). Use either only when the expected decision value exceeds the cost; combining them adds five calls because review lanes share one synthesis.
 
 Prompts should be outcome-first and small: static contracts first, current task evidence last; targeted checks before broad checks; and stop when criteria are proven or a meaningful blocker remains.
 
@@ -73,7 +74,7 @@ Prompts should be outcome-first and small: static contracts first, current task 
 | Location | Purpose |
 | --- | --- |
 | `0xSDLC-*` | frequently invoked model-facing phase contracts |
-| `support/` | less-frequent agents, shared guardrails, adapters, MCP boundary, and compatibility material |
+| `support/` | less-frequent agents, engineering/language profiles, shared guardrails, adapters, MCP boundary, and compatibility material |
 | `templates/` | durable task-artifact schemas |
 | `docs/` | human-facing architecture, operation, installation, and references |
 | `scripts/` | cross-platform runner, installer, and structural validator |

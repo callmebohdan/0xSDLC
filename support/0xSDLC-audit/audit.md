@@ -24,8 +24,9 @@ Build an evidence-based map of the existing repository before planning or editin
 4. Trace the current behavior through the narrowest useful path.
 5. Identify extension points, ownership boundaries, public contracts, persistence, external services, and security-sensitive flows.
 6. Run read-only or diagnostic checks needed to establish the baseline, recording command, exit code, and limitations.
-7. Note conventions: naming, error handling, logging, test style, dependency policy, branching, and generated-file policy.
-8. Record unknowns that the architect must resolve.
+7. Note conventions: naming, error handling, logging, test style, dependency policy, branching, and generated-file policy. Cite formatter, linter, compiler-warning, static-analysis, sanitizer, build, and language-version configuration where present.
+8. Identify language and architecture evidence without imposing a generic profile. Distinguish explicit configuration, consistent local convention, and unresolved preference.
+9. Record unknowns that the architect must resolve.
 
 ## What to inspect
 
@@ -34,6 +35,7 @@ Build an evidence-based map of the existing repository before planning or editin
 - Configuration before changing commands.
 - Git status before interpreting diffs.
 - Lockfiles and package metadata before suggesting dependencies.
+- Formatter/linter files, compiler options, contribution rules, and representative neighboring code before describing style.
 - Environment and platform assumptions before diagnosing failures.
 
 ## Guardrails

@@ -23,6 +23,15 @@ Quality assurance is an optional release, compliance, or high-risk gate rather t
 - Load root instructions, shared conventions, active phase instructions, current artifacts, and relevant source only.
 - Start a fresh context at major phase boundaries.
 - Use task artifacts as handoffs, not a full conversation transcript.
+- Load only phase-relevant engineering practices and detected language profiles. Project configuration and local conventions take precedence.
+
+## Engineering-quality rules
+
+- Audit discovers formatter, linter, compiler, static-analysis, sanitizer, test, language-version, and architecture evidence.
+- Design justifies interfaces, boundaries, ownership, relevant scalability, and every new pattern or abstraction.
+- Implementation follows deterministic project tooling and avoids unrelated style cleanup.
+- Review reports maintainability defects only when backed by project policy or concrete correctness, coupling, ownership, testability, performance, or operational impact.
+- Use the optional maintainability review lane only when its two extra calls can materially change the decision.
 
 ## Failure rules
 

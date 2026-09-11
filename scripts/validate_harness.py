@@ -23,7 +23,14 @@ REQUIRED = [
     "support/0xSDLC-conventions/evidence-and-status.md",
     "support/0xSDLC-conventions/boundaries.md",
     "support/0xSDLC-conventions/parallel-synthesis.md",
+    "support/engineering-practices/README.md",
+    "support/engineering-practices/maintainability.md",
+    "support/engineering-practices/architecture.md",
+    "support/engineering-practices/design-patterns.md",
+    "support/engineering-practices/maintainability-review.md",
+    "support/engineering-practices/languages/cpp.md",
     "docs/evaluation.md",
+    "docs/engineering-quality.md",
     "docs/naming.md",
     "docs/references.md",
     "scripts/0xSDLC.py",
@@ -47,6 +54,7 @@ REQUIRED = [
     "support/adapters/profiles/cursor.json",
     "templates/agent-skill-tests/README.md",
     "templates/design.md",
+    "templates/maintainability-review.md",
 ]
 
 AGENT_PATHS = {
@@ -59,6 +67,7 @@ AGENT_PATHS = {
     "implementer": "0xSDLC-implement/implementation.md",
     "tester": "support/0xSDLC-test/testing.md",
     "reviewer": "support/0xSDLC-review/review.md",
+    "maintainability-reviewer": "support/engineering-practices/maintainability-review.md",
     "quality-control": "support/0xSDLC-quality/quality-assurance.md",
     "verifier": "0xSDLC-verify/verification.md",
     "fixer": "0xSDLC-fix/fix.md",

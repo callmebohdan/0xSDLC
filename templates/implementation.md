@@ -35,6 +35,16 @@ assumptions: []
 | Command | Directory | Exit code | Result | Limitation |
 | --- | --- | ---: | --- | --- |
 
+Include applicable formatter, compiler diagnostics, lint/static analysis, sanitizer, test, and build evidence. Record only checks actually run.
+
+## Engineering-quality decisions
+
+- Project conventions applied:
+- Applicable language profile:
+- Ownership/interfaces/error behavior:
+- New abstraction and concrete justification:
+- Compatibility/build impact:
+
 ## Acceptance coverage
 
 | Criterion | Evidence | Result |

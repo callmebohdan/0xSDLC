@@ -10,10 +10,16 @@ These sources informed the harness. They are guidance, not runtime dependencies;
 | [Addy Osmani — How to write a good spec for AI agents](https://addyosmani.com/blog/good-spec/) | Start from a concise goal; make specs living artifacts; capture commands, tests, project structure, style, Git workflow, and boundaries; split large work into focused contexts. |
 | [Thoughtworks — Spec-driven development](https://www.thoughtworks.com/en-us/insights/blog/agile-engineering-practices/spec-driven-development-unpacking-2025-new-engineering-practices) | Treat specifications as durable, evolving engineering artifacts that connect intent, implementation, and validation. |
 | [AGENTS.md](https://agents.md/) | Keep project-specific setup, test commands, conventions, and boundaries in a predictable repository-level instruction file. |
+| [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines) | Prefer explicit, strongly typed interfaces, RAII/resource safety, visible ownership, disciplined errors/concurrency, and tool-supported rules. |
+| [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) | Optimize code for readers, consistency, automation, and avoidance of surprising constructs; treat its organization-specific choices as an optional project policy. |
+| [hacking C++](https://hackingcpp.com/index) | Use concise contemporary C++ examples as educational context, not as a repository's normative standard. |
+| [Refactoring.Guru — Design patterns](https://refactoring.guru/design-patterns) | Use patterns as adaptable solution vocabulary while retaining criticism and avoiding mechanical pattern application. |
+| [OODesign — Design patterns](https://www.oodesign.com/) | Compare established pattern intent and structure, then justify applicability from current project forces. |
 
 ## How to use references responsibly
 
 - Prefer the repository's `AGENTS.md` and current task specification over generic web guidance.
 - Do not copy provider-specific commands or product claims into a generic contract without checking current official documentation.
 - Treat recommendations as hypotheses: add a workflow stage, model call, or prompt rule only if it improves an observable harness failure, quality measure, or cost profile.
+- Do not combine incompatible style guides into a universal language policy. Project configuration and established conventions remain authoritative.
 - When a provider changes behavior, update its adapter documentation and validate the installation path; do not alter shared phase semantics to fit one provider.

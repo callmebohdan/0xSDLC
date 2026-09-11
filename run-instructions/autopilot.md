@@ -18,6 +18,8 @@ python scripts/0xSDLC-autopilot.py "Add CSV export to the reports page" --model 
 
 `--full` is deliberately opt-in and requires `--execute`. The runner stops at approval gates, adapter failures, or missing required phase artifacts. The detailed agent contract is [`0xSDLC-autopilot/autopilot.md`](../0xSDLC-autopilot/autopilot.md).
 
+For architecture-heavy or reusable code, add `--maintainability-review`. It runs one focused review beside the normal review and synthesizes both before routing, adding two model calls. Use deterministic project formatters and analyzers for mechanical style instead.
+
 ## Inputs
 
 - A concise user request.

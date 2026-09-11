@@ -45,17 +45,25 @@ def transition(route_path: Path, route: dict[str, Any], phase: str, status: str,
     save_route(route_path, route)
 
 
-def execute_adapter(task_dir: Path, workspace: Path, phase: str, model: str, lane: str = "primary", output_artifact: str | None = None) -> int:
+def execute_adapter(
+    task_dir: Path,
+    workspace: Path,
+    phase: str,
+    model: str,
+    lane: str = "primary",
+    output_artifact: str | None = None,
+    evidence_inputs: list[str] | None = None,
+) -> int:
     profile, template = load_profile(model), adapter_command(model)
     if not template:
         print(f"No adapter configured for {model!r}. Set {profile['command_env']} or omit --execute.", file=os.sys.stderr)
         return 2
-    if lane == "secondary" and not profile["capabilities"].get("parallel_processes"):
+    if lane in {"secondary", "maintainability"} and not profile["capabilities"].get("parallel_processes"):
         print(f"Provider {model!r} does not declare parallel_processes capability.", file=os.sys.stderr)
         return 2
     suffix = "" if lane == "primary" else f"-{lane}"
     prompt_file = task_dir / f"prompt-{phase}{suffix}.md"
-    write_text(prompt_file, prompt_for(task_dir, workspace, phase, model, lane, output_artifact))
+    write_text(prompt_file, prompt_for(task_dir, workspace, phase, model, lane, output_artifact, evidence_inputs))
     sidecar = f"adapter-{phase}{suffix}.telemetry.json"
     replacements = {
         "prompt_file": str(prompt_file), "workspace": str(workspace), "output_dir": str(task_dir),
@@ -85,14 +93,22 @@ def _record_call(task_dir: Path, route: dict[str, Any], phase: str, lane: str, m
     })
 
 
-def run_synthesis(task_dir: Path, workspace: Path, route: dict[str, Any], source_phase: str, model: str, primary: str, secondary: str) -> tuple[int, str | None]:
+def run_synthesis(
+    task_dir: Path,
+    workspace: Path,
+    route: dict[str, Any],
+    source_phase: str,
+    model: str,
+    evidence: list[str],
+) -> tuple[int, str | None]:
+    primary = evidence[0]
     route_path, artifact = task_dir / "route.json", sibling_artifact(primary, "synthesis")
     lane = route["phase_states"][source_phase]["lanes"].setdefault("synthesis", {"status": "running"})
     save_route(route_path, route)
     started = time.monotonic()
-    result = execute_adapter(task_dir, workspace, "synthesis", model, source_phase, artifact)
+    result = execute_adapter(task_dir, workspace, "synthesis", model, source_phase, artifact, evidence)
     _record_call(task_dir, route, "synthesis", source_phase, model, result, int((time.monotonic() - started) * 1000))
-    lane.update({"status": "succeeded" if result == 0 else "failed", "exit_code": result, "artifact": artifact, "inputs": [primary, secondary]})
+    lane.update({"status": "succeeded" if result == 0 else "failed", "exit_code": result, "artifact": artifact, "inputs": evidence})
     if result:
         save_route(route_path, route)
         return result, None
@@ -109,7 +125,16 @@ def run_synthesis(task_dir: Path, workspace: Path, route: dict[str, Any], source
     return 0, artifact
 
 
-def run_phase(task_dir: Path, workspace: Path, route: dict[str, Any], phase: str, model: str, parallel_checks: bool = False, output_artifact: str | None = None) -> int:
+def run_phase(
+    task_dir: Path,
+    workspace: Path,
+    route: dict[str, Any],
+    phase: str,
+    model: str,
+    parallel_checks: bool = False,
+    output_artifact: str | None = None,
+    maintainability_review: bool = False,
+) -> int:
     route_path = task_dir / "route.json"
     if phase not in route["phase_states"]:
         route["phase_states"][phase] = {"status": "pending", "attempts": 0, "lanes": {"primary": {"status": "pending"}}}
@@ -119,6 +144,8 @@ def run_phase(task_dir: Path, workspace: Path, route: dict[str, Any], phase: str
     lanes = [("primary", primary)]
     if parallel_checks and phase in {"audit", "review"}:
         lanes.append(("secondary", sibling_artifact(primary, "secondary")))
+    if maintainability_review and phase == "review":
+        lanes.append(("maintainability", sibling_artifact(primary, "maintainability")))
     state = route["phase_states"][phase]
     for lane, _ in lanes:
         state["lanes"].setdefault(lane, {})["status"] = "running"
@@ -132,7 +159,7 @@ def run_phase(task_dir: Path, workspace: Path, route: dict[str, Any], phase: str
     if len(lanes) == 1:
         results = [invoke(*lanes[0])]
     else:
-        with ThreadPoolExecutor(max_workers=2) as pool:
+        with ThreadPoolExecutor(max_workers=len(lanes)) as pool:
             results = [future.result() for future in [pool.submit(invoke, *lane) for lane in lanes]]
     for (lane, artifact), (result, duration) in zip(lanes, results):
         state["lanes"][lane].update({"status": "succeeded" if result == 0 else "failed", "exit_code": result, "artifact": artifact})
@@ -154,8 +181,8 @@ def run_phase(task_dir: Path, workspace: Path, route: dict[str, Any], phase: str
         transition(route_path, route, phase, "needs-approval", reason="phase artifact requires human review")
         return 4
     apply_route_directives(route, metadata[primary], phase)
-    if len(lanes) == 2:
-        result, synthesis = run_synthesis(task_dir, workspace, route, phase, model, primary, lanes[1][1])
+    if len(lanes) > 1:
+        result, synthesis = run_synthesis(task_dir, workspace, route, phase, model, [artifact for _, artifact in lanes])
         if result:
             transition(route_path, route, phase, "blocked", reason="parallel evidence synthesis failed")
             return result
@@ -174,7 +201,14 @@ def review_decision(task_dir: Path, route: dict[str, Any]) -> tuple[str, list[st
     return metadata.get("decision", "needs-review"), list_value(metadata.get("blocking_findings"))
 
 
-def run_review_fix_loop(task_dir: Path, workspace: Path, route: dict[str, Any], model: str, parallel_checks: bool) -> int:
+def run_review_fix_loop(
+    task_dir: Path,
+    workspace: Path,
+    route: dict[str, Any],
+    model: str,
+    parallel_checks: bool,
+    maintainability_review: bool,
+) -> int:
     route_path = task_dir / "route.json"
     while True:
         decision, findings = review_decision(task_dir, route)
@@ -198,12 +232,28 @@ def run_review_fix_loop(task_dir: Path, workspace: Path, route: dict[str, Any], 
         route.setdefault("fix_history", []).append({"attempt": attempt, "findings": findings, "at": utc_now()})
         save_route(route_path, route)
         for current, artifact in (("fix", f"fix-report-{attempt}.md"), ("test", f"test-report-{attempt}.md"), ("review", f"review-{attempt}.md")):
-            result = run_phase(task_dir, workspace, route, current, model, parallel_checks if current == "review" else False, artifact)
+            result = run_phase(
+                task_dir,
+                workspace,
+                route,
+                current,
+                model,
+                parallel_checks if current == "review" else False,
+                artifact,
+                maintainability_review if current == "review" else False,
+            )
             if result:
                 return result
 
 
-def run_full_cycle(task_dir: Path, workspace: Path, route: dict[str, Any], model: str, parallel_checks: bool = False) -> int:
+def run_full_cycle(
+    task_dir: Path,
+    workspace: Path,
+    route: dict[str, Any],
+    model: str,
+    parallel_checks: bool = False,
+    maintainability_review: bool = False,
+) -> int:
     route_path = task_dir / "route.json"
     index = 0
     while index < len(route["phases"]):
@@ -215,11 +265,11 @@ def run_full_cycle(task_dir: Path, workspace: Path, route: dict[str, Any], model
             transition(route_path, route, phase, "needs-approval")
             print("Autopilot paused at the human approval gate.")
             return 0
-        result = run_phase(task_dir, workspace, route, phase, model, parallel_checks)
+        result = run_phase(task_dir, workspace, route, phase, model, parallel_checks, maintainability_review=maintainability_review)
         if result:
             return 0 if result == 4 else result
         if phase == "review":
-            result = run_review_fix_loop(task_dir, workspace, route, model, parallel_checks)
+            result = run_review_fix_loop(task_dir, workspace, route, model, parallel_checks, maintainability_review)
             if result:
                 return 0 if result == 4 else result
         index += 1

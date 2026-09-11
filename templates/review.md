@@ -50,6 +50,10 @@ When `decision: fix`, put every finding that must be fixed in `blocking_findings
 - Performance/resource use:
 - Accessibility/user experience:
 - Rollback/recovery:
+- Cohesion/dependency direction:
+- Ownership/lifetime/concurrency:
+- Pattern or abstraction justification:
+- Language-specific tool evidence:
 
 ## Recommendation
 

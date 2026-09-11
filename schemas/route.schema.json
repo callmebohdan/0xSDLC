@@ -3,7 +3,7 @@
   "$id": "https://0xsdlc.local/schemas/route.schema.json",
   "title": "0xSDLC route state",
   "type": "object",
-  "required": ["schema_version", "task_id", "request", "workspace", "classification", "model", "status", "current_phase", "phases", "phase_states", "events", "created_at"],
+  "required": ["schema_version", "task_id", "request", "workspace", "classification", "model", "status", "current_phase", "phases", "routing", "phase_states", "events", "created_at"],
   "properties": {
     "schema_version": {"const": "0.4"},
     "task_id": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}_[a-z0-9-]+_[a-f0-9]{8}$"},
@@ -14,6 +14,16 @@
     "status": {"enum": ["prepared", "running", "phase-completed", "blocked", "needs-approval", "needs-review", "completed"]},
     "current_phase": {"type": "string"},
     "phases": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "routing": {
+      "type": "object",
+      "required": ["design", "approval", "maintainability_review"],
+      "properties": {
+        "design": {"type": "boolean"},
+        "approval": {"type": "boolean"},
+        "maintainability_review": {"type": "boolean"}
+      },
+      "additionalProperties": true
+    },
     "phase_states": {"type": "object", "additionalProperties": {"$ref": "#/$defs/phaseState"}},
     "events": {"type": "array", "items": {"type": "object", "required": ["event", "at"], "properties": {"event": {"type": "string"}, "at": {"type": "string"}, "reason": {"type": "string"}}, "additionalProperties": true}},
     "telemetry": {"$ref": "#/$defs/telemetry"},

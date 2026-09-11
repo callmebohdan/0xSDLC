@@ -13,6 +13,7 @@
     "implementer",
     "tester",
     "reviewer",
+    "maintainability-reviewer",
     "verifier",
     "fixer"
   ],
@@ -25,6 +26,7 @@
     "implementation.md",
     "test-report.md",
     "review.md",
+    "maintainability-review.md",
     "quality-report.md",
     "verification.md",
     "fix-report.md",

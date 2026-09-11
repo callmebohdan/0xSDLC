@@ -65,6 +65,54 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual(route["status"], "completed")
         self.assertEqual(route["telemetry"]["calls"], 6)
         self.assertGreater(route["telemetry"]["input_tokens"], 0)
+        self.assertTrue((self.latest_task() / "project-profile.json").is_file())
+
+    def test_maintainability_review_adds_lane_and_shared_synthesis(self) -> None:
+        (self.workspace / "main.cpp").write_text("int main() { return 0; }\n", encoding="utf-8")
+        result = self.run_cli(
+            "autopilot",
+            "refactor reusable parser",
+            "--kind",
+            "small",
+            "--workspace",
+            str(self.workspace),
+            "--execute",
+            "--full",
+            "--maintainability-review",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        task = self.latest_task()
+        route = self.route(task)
+        self.assertTrue(route["routing"]["maintainability_review"])
+        self.assertEqual(route["telemetry"]["calls"], 8)
+        self.assertTrue((task / "review-maintainability.md").is_file())
+        self.assertTrue((task / "review-synthesis.md").is_file())
+        prompt = (task / "prompt-review-maintainability.md").read_text(encoding="utf-8")
+        self.assertIn("# C++ engineering profile", prompt)
+        self.assertIn("# Maintainability review lane", prompt)
+
+    def test_parallel_and_maintainability_reviews_share_one_synthesis(self) -> None:
+        result = self.run_cli(
+            "autopilot",
+            "refactor reusable parser",
+            "--kind",
+            "small",
+            "--workspace",
+            str(self.workspace),
+            "--execute",
+            "--full",
+            "--parallel-checks",
+            "--maintainability-review",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        task = self.latest_task()
+        route = self.route(task)
+        self.assertEqual(route["telemetry"]["calls"], 11)
+        synthesis = route["phase_states"]["review"]["lanes"]["synthesis"]
+        self.assertEqual(
+            synthesis["inputs"],
+            ["review.md", "review-secondary.md", "review-maintainability.md"],
+        )
 
     def test_blocked_artifact_stops(self) -> None:
         result = self.run_cli("autopilot", "fix local label", "--kind", "small", "--workspace", str(self.workspace), "--execute", "--full", mode="blocked")

@@ -27,6 +27,16 @@ Maintain 0xSDLC as a lightweight, model-neutral, spec-driven coding harness. Opt
 - `scripts/`: small, dependency-free Python utilities.
 - `.agents/0xsdlc/sessions/`: generated local artifacts; do not treat them as source code.
 
+## Engineering standards
+
+- Keep the runner compatible with Python 3.10+ and dependency-free unless a dependency is explicitly approved.
+- Separate orchestration state, routing policy, provider translation, prompt assembly, storage, and project discovery rather than growing a monolithic entry point.
+- Prefer typed, focused functions and explicit persisted state over hidden globals or provider-specific behavior.
+- Preserve route/artifact backward compatibility or add an explicit migration with regression coverage.
+- Keep Markdown contracts self-contained but load them selectively; new guidance must justify its prompt and model-call cost.
+- Use design patterns only for a demonstrated current need. Record the simpler alternative, added indirection, and test seam.
+- Extend deterministic fake-adapter tests for routing, recovery, artifact, cost/call-count, and installation behavior before claiming harness support.
+
 ## Output style
 
 Use concise Markdown. Prefer tables and checklists over prose. Every claim about correctness must point to evidence: a command, file, test, or explicit human decision.

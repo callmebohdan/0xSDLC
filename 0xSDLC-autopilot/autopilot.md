@@ -46,6 +46,12 @@ It allows two attempts per stable finding and four attempts per route. If stable
 
 `--parallel-checks` is opt-in. It adds an independent audit lane and review lane, then a separate synthesis call for each pair. The synthesis reconciles disagreement, keeps the stricter evidence-backed conclusion, and records whether the extra call changed confidence. This costs four extra model calls; reserve it for high-impact or high-uncertainty work.
 
+`--maintainability-review` is a narrower opt-in. It adds one focused review lane plus synthesis, costing two extra calls. Use it for reusable libraries, architectural changes, public interfaces, performance/concurrency-sensitive code, or explicit maintainability concerns. It is not a formatting agent: deterministic project tools handle mechanical style. When combined with `--parallel-checks`, all three review reports share one synthesis, for five extra calls across the route rather than six.
+
+## Engineering practices
+
+Project instructions, checked-in tooling, and established local conventions remain authoritative. The runner records a bounded project profile for every task and selectively loads generic maintainability/architecture guidance plus applicable language profiles. It must not inject the entire practice library, impose one company's style guide, or turn a scoped task into a broad cleanup.
+
 ## Boundaries
 
 Autopilot may inspect, specify, plan, make scoped local changes, and run local checks when allowed. It pauses for every `Ask before doing` boundary in [`boundaries.md`](../support/0xSDLC-conventions/boundaries.md), including secrets, external data transfer, dependencies, CI/release, migrations, public contracts, destructive operations, and commits. More restrictive project instructions win.

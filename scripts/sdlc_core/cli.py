@@ -47,11 +47,26 @@ def create_task(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], s
     task_dir.mkdir()
     model, kind = select_model(args.model), args.kind or classify(args.request)
     include_design = True if kind == "high-risk" else (args.design if args.design is not None else needs_design(args.request, kind))
-    route = route_payload(task_id, args.request, kind, model, include_design, args.approval or kind == "high-risk", str(workspace))
+    route = route_payload(
+        task_id,
+        args.request,
+        kind,
+        model,
+        include_design,
+        args.approval or kind == "high-risk",
+        str(workspace),
+        args.maintainability_review,
+    )
+    if args.maintainability_review:
+        route["events"].append({
+            "event": "review-lane-selected",
+            "at": utc_now(),
+            "reason": "human requested focused maintainability review",
+        })
     write_text(task_dir / "brief.md", render_template(library_path("templates/brief.md"), {"task_id": task_id, "request": args.request}))
+    profile = project_profile(workspace)
+    write_json(task_dir / "project-profile.json", profile)
     if not (workspace / "AGENTS.md").is_file():
-        profile = project_profile(workspace)
-        write_json(task_dir / "project-profile.json", profile)
         write_text(task_dir / "project-context.md", agents_draft(profile))
         route["events"].append({"event": "project-instructions-missing", "at": utc_now(), "reason": "using task-local project context; run bootstrap to propose AGENTS.md"})
     save_route(task_dir / "route.json", route)
@@ -66,6 +81,9 @@ def cmd_autopilot(args: argparse.Namespace) -> int:
     if args.parallel_checks and not args.full:
         print("--parallel-checks requires --full.", file=sys.stderr)
         return 2
+    if args.maintainability_review and not args.full:
+        print("--maintainability-review requires --full.", file=sys.stderr)
+        return 2
     try:
         task_dir, workspace, route, model = create_task(args)
     except (OSError, ValueError) as exc:
@@ -78,7 +96,7 @@ def cmd_autopilot(args: argparse.Namespace) -> int:
     try:
         with TaskLock(task_dir):
             if args.full:
-                return run_full_cycle(task_dir, workspace, route, model, args.parallel_checks)
+                return run_full_cycle(task_dir, workspace, route, model, args.parallel_checks, args.maintainability_review)
             result = run_phase(task_dir, workspace, route, route["current_phase"], model)
             return 0 if result in {0, 4} else result
     except RuntimeError as exc:
@@ -109,6 +127,13 @@ def cmd_resume(args: argparse.Namespace) -> int:
             if not workspace.is_dir():
                 raise ValueError(f"workspace is not available: {workspace}")
             model = args.model or route["model"]
+            if args.maintainability_review and not route.setdefault("routing", {}).get("maintainability_review"):
+                route["routing"]["maintainability_review"] = True
+                route.setdefault("events", []).append({
+                    "event": "review-lane-added", "at": utc_now(),
+                    "reason": "human requested maintainability review on resume",
+                })
+                save_route(task_dir / "route.json", route)
             approval = route["phase_states"].get("approval")
             if approval and approval["status"] == "needs-approval":
                 if not args.approve:
@@ -122,7 +147,14 @@ def cmd_resume(args: argparse.Namespace) -> int:
             if not args.full:
                 print("Resume requires --full to preserve route ordering.", file=sys.stderr)
                 return 2
-            return run_full_cycle(task_dir, workspace, route, model, args.parallel_checks)
+            return run_full_cycle(
+                task_dir,
+                workspace,
+                route,
+                model,
+                args.parallel_checks,
+                bool(route.get("routing", {}).get("maintainability_review")),
+            )
     except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
         print(f"Cannot resume task: {exc}", file=sys.stderr)
         return 2
@@ -187,7 +219,7 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
             "implement": {"status": "pending" if not args.write else "succeeded", "attempts": 0, "lanes": {"primary": {"status": "pending"}}},
             "verify": {"status": "pending" if not args.write else "succeeded", "attempts": 0, "lanes": {"primary": {"status": "pending"}}},
         },
-        "routing": {"design": False, "approval": True}, "limits": {}, "human_gates": ["approval"],
+        "routing": {"design": False, "approval": True, "maintainability_review": False}, "limits": {}, "human_gates": ["approval"],
         "events": [{"event": "bootstrap-draft-created", "at": utc_now(), "reason": "derived from repository evidence"}],
         "telemetry": {"calls": 0, "duration_ms": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0}, "created_at": utc_now(),
     })
@@ -244,6 +276,11 @@ def build_parser() -> argparse.ArgumentParser:
     autopilot.add_argument("--execute", action="store_true")
     autopilot.add_argument("--full", action="store_true")
     autopilot.add_argument("--parallel-checks", action="store_true")
+    autopilot.add_argument(
+        "--maintainability-review",
+        action="store_true",
+        help="add one focused review lane plus synthesis; costs two model calls",
+    )
     autopilot.set_defaults(func=cmd_autopilot)
 
     resume = sub.add_parser("resume", help="recover and continue an existing task")
@@ -254,6 +291,7 @@ def build_parser() -> argparse.ArgumentParser:
     resume.add_argument("--execute", action="store_true")
     resume.add_argument("--full", action="store_true")
     resume.add_argument("--parallel-checks", action="store_true")
+    resume.add_argument("--maintainability-review", action="store_true")
     resume.add_argument("--stale-lock-seconds", type=int, default=1800)
     resume.set_defaults(func=cmd_resume)
 

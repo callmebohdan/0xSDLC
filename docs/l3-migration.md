@@ -14,6 +14,7 @@
 | Telemetry | local latency/exit records and optional token/cost sidecars | measured budget policies and dashboards |
 | Adaptive routing | audit/design/plan may add `design` or `approval` with a reason | richer invalidation and task-slice scheduling |
 | Project bootstrap | evidence profile and reviewable `AGENTS.md` draft | optional model refinement checked against facts |
+| Engineering profiles | bounded project scan, selective C++ guidance, optional synthesized maintainability review | evaluated language expansion and measured review-yield policy |
 
 ## What is not L3 yet
 

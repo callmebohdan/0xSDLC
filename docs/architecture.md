@@ -24,7 +24,7 @@ Owns task identity, artifact locations, route choice, phase order, current statu
 
 ### Subagent contract
 
-Owns one bounded transformation: specify, audit, design, plan, implement, test, review, verify, or fix. Quality assurance remains an optional release/compliance gate, not a default phase. Design is conditional, not a mandatory ceremony. Each agent reads listed inputs, follows shared guardrails, and writes the named output artifact.
+Owns one bounded transformation: specify, audit, design, plan, implement, test, review, verify, or fix. Quality assurance remains an optional release/compliance gate, not a default phase. Design is conditional, not a mandatory ceremony. A focused maintainability reviewer is an optional review lane, not another route phase. Each agent reads listed inputs, follows shared guardrails, and writes the named output artifact.
 
 ### Adapter
 
@@ -49,6 +49,7 @@ Files are inspectable, versionable, portable across model vendors, and cheap to 
 | Global | published `~/.agents/0xsdlc` contracts | adapter setup / shared rules |
 | Project | root `AGENTS.md`, local conventions | every phase |
 | Phase | one subagent contract and template | active phase |
+| Practice | phase-relevant maintainability/architecture supplement and detected language profile | selected design/implementation/test/review contexts only |
 | Task | brief, route, relevant reports | current task |
 | Source | only relevant files and tests | needed for decision |
 
@@ -66,7 +67,7 @@ review(needs-review) → human decision
 verification → completed | needs-review | blocked
 ```
 
-State changes must be reflected atomically in `route.json` and supported by a valid artifact. A model response without a durable artifact is not a completed phase. Parallel audit/review lanes add a distinct synthesis artifact before their conclusions influence routing.
+State changes must be reflected atomically in `route.json` and supported by a valid artifact. A model response without a durable artifact is not a completed phase. Parallel audit/review or maintainability lanes add a distinct synthesis artifact before their conclusions influence routing.
 
 ## Design tradeoffs
 
@@ -74,3 +75,4 @@ State changes must be reflected atomically in `route.json` and supported by a va
 - Specialized subagents: smaller context and clearer accountability, at the cost of handoff overhead.
 - Markdown artifacts: human-readable and model-portable, at the cost of requiring disciplined templates.
 - CLI adapters: low dependency coupling, at the cost of provider-specific configuration and weaker runtime introspection.
+- Layered engineering profiles: project authority and low normal prompt cost, at the cost of language-detection and precedence rules.

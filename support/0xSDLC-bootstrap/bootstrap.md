@@ -21,11 +21,12 @@ Inspect README files, package/build manifests, lock files, CI configuration, tes
 1. Record repository root, branch, existing changes, detected ecosystems, and evidence files.
 2. Extract exact setup, build, test, lint, format, and development commands. Mark unexecuted commands as unverified.
 3. Describe source, test, documentation, generated, vendored, and sensitive locations.
-4. Capture style and architecture only where code/config consistently supports it.
+4. Detect languages and capture style and architecture only where code/config consistently supports it. Separate formatter/linter/compiler settings from inferred local habits.
 5. Capture Git/PR rules only from explicit project documentation or configuration.
 6. Add always/ask/never boundaries, including secrets and external side effects.
 7. List unresolved information rather than filling it with generic assumptions.
 8. Write `agents-draft.md` in the task session. A human reviews it before `AGENTS.md` is created or updated.
+9. When no explicit engineering standard exists, list the unresolved choice and optionally recommend the applicable 0xSDLC language profile as a starting point; do not present it as adopted policy.
 
 ## Guardrails
 

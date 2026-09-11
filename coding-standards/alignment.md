@@ -9,6 +9,7 @@
 - `support/adapters/` contains provider translation contracts only.
 - `templates/` contains artifact schemas and agent-skill test templates.
 - `support/0xSDLC-conventions/` contains shared rules used by every phase.
+- `support/engineering-practices/` contains selectively loaded generic and language-specific engineering guidance.
 - `run-instructions/` contains how to load and execute agents.
 - `orchestrator/` contains route/manifest and orchestration design.
 - `scripts/` contains dependency-free implementation utilities.

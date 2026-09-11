@@ -13,6 +13,8 @@
 | Review yield | actionable findings found before verification | tells whether independent review changes outcomes |
 | Fix-loop behavior | attempt count per stable finding and final disposition | detects repeated, unproductive retries |
 | Provider portability | same packet produces valid artifacts under each adapter | prevents one provider's syntax from becoming the architecture |
+| Engineering-profile precision | relevant language guidance is loaded without overriding project rules | improves maintainability without universal-style drift |
+| Maintainability-review yield | focused lane finds a material issue not found by normal review | determines whether its two extra calls are justified |
 
 ## Evaluation set
 
@@ -27,9 +29,10 @@ Run structural checks first, then the narrowest relevant task checks. A harness 
 1. Start sequentially with the smallest route.
 2. Add design only when a technical decision changes risk, compatibility, or implementation shape.
 3. Add a human gate for high-impact side effects, not for routine local edits.
-4. Use parallel audit/review only when a second independent perspective could materially change a decision. Its two independent lanes plus synthesis add four calls.
-5. Stop a fix loop when the same stable finding has consumed two attempts or the route has consumed four fixes. Escalate the decision, not the token budget.
-6. Keep static contracts before dynamic task evidence in an adapter prompt where the provider supports prefix caching; measure actual savings rather than assuming them.
+4. Use focused maintainability review for architecture/reuse risk only when it can change the decision; it adds two calls.
+5. Use parallel audit/review only when a second general perspective could materially change a decision. Its two independent lanes plus synthesis add four calls; combining both options adds five calls because review lanes share synthesis.
+6. Stop a fix loop when the same stable finding has consumed two attempts or the route has consumed four fixes. Escalate the decision, not the token budget.
+7. Keep static contracts before dynamic task evidence in an adapter prompt where the provider supports prefix caching; measure actual savings rather than assuming them.
 
 ## Failure review
 

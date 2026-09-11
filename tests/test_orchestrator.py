@@ -54,6 +54,7 @@ class RouteTests(unittest.TestCase):
         self.assertEqual(migrated["schema_version"], "0.4")
         self.assertTrue(changes)
         self.assertEqual(migrated["events"][-1]["event"], "route-migrated")
+        self.assertFalse(migrated["routing"]["maintainability_review"])
 
     def test_task_lock_rejects_concurrent_owner(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -62,6 +63,17 @@ class RouteTests(unittest.TestCase):
                 with self.assertRaises(RuntimeError):
                     with ORCHESTRATOR.TaskLock(task):
                         pass
+
+    def test_current_route_is_normalized_when_optional_routing_field_is_missing(self) -> None:
+        route = {
+            "schema_version": "0.4",
+            "routing": {"design": False, "approval": False},
+            "events": [],
+        }
+        normalized, changes = ORCHESTRATOR.migrate_route(route)
+        self.assertTrue(changes)
+        self.assertFalse(normalized["routing"]["maintainability_review"])
+        self.assertEqual(normalized["events"][-1]["event"], "route-normalized")
 
     def test_provider_profiles_have_structural_conformance(self) -> None:
         self.assertEqual(ORCHESTRATOR.validate_profiles(), [])
