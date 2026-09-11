@@ -54,6 +54,6 @@ Project instructions, checked-in tooling, and established local conventions rema
 
 ## Boundaries
 
-Autopilot may inspect, specify, plan, make scoped local changes, and run local checks when allowed. It pauses for every `Ask before doing` boundary in [`boundaries.md`](../support/0xSDLC-conventions/boundaries.md), including secrets, external data transfer, dependencies, CI/release, migrations, public contracts, destructive operations, and commits. More restrictive project instructions win.
+Autopilot may inspect, specify, plan, make scoped local changes, and run local checks when allowed. It pauses for every `Ask before doing` boundary in [`boundaries.md`](../support/conventions/boundaries.md), including secrets, external data transfer, dependencies, CI/release, migrations, public contracts, destructive operations, and commits. More restrictive project instructions win.
 
 If the target repository has no `AGENTS.md`, create task-local project context from observable files and continue when safe. Use the separate project-bootstrap agent to propose permanent instructions; adopting that draft requires explicit human approval and must never overwrite an existing file automatically.

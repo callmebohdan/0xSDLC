@@ -13,16 +13,18 @@ REQUIRED = [
     "AGENTS.md",
     "docs/agent-library.md",
     "orchestrator/manifest.json",
-    "run-instructions/autopilot.md",
+    "docs/operations/autopilot.md",
     "0xSDLC-autopilot/autopilot.md",
     "support/adapters/README.md",
     "support/adapters/cursor.md",
     "support/adapters/generic.md",
-    "support/0xSDLC-conventions/phase-protocol.md",
-    "support/0xSDLC-conventions/output-contract.md",
-    "support/0xSDLC-conventions/evidence-and-status.md",
-    "support/0xSDLC-conventions/boundaries.md",
-    "support/0xSDLC-conventions/parallel-synthesis.md",
+    "support/conventions/phase-protocol.md",
+    "support/conventions/output-contract.md",
+    "support/conventions/evidence-and-status.md",
+    "support/conventions/boundaries.md",
+    "support/conventions/parallel-synthesis.md",
+    "support/conventions/context-budget.md",
+    "support/conventions/version-control.md",
     "support/engineering-practices/README.md",
     "support/engineering-practices/maintainability.md",
     "support/engineering-practices/architecture.md",
@@ -42,10 +44,16 @@ REQUIRED = [
     "scripts/sdlc_core/providers.py",
     "scripts/sdlc_core/telemetry.py",
     "scripts/sdlc_core/project.py",
-    "support/0xSDLC-bootstrap/bootstrap.md",
-    "support/skills/0xsdlc-autopilot/SKILL.md",
-    "support/skills/0xsdlc-agent/SKILL.md",
-    "support/skills/0xsdlc-bootstrap/SKILL.md",
+    "support/agents/0xSDLC-bootstrap/bootstrap.md",
+    "support/integrations/README.md",
+    "support/integrations/portable-skills/0xsdlc-autopilot/SKILL.md",
+    "support/integrations/portable-skills/0xsdlc-agent/SKILL.md",
+    "support/integrations/portable-skills/0xsdlc-bootstrap/SKILL.md",
+    "support/integrations/codex/metadata/0xsdlc-autopilot/openai.yaml",
+    "support/integrations/codex/metadata/0xsdlc-agent/openai.yaml",
+    "support/integrations/codex/metadata/0xsdlc-bootstrap/openai.yaml",
+    "support/mcp/README.md",
+    "docs/integrations/git.md",
     "schemas/route.schema.json",
     "schemas/artifact.schema.json",
     "support/adapters/profiles/generic.json",
@@ -59,16 +67,16 @@ REQUIRED = [
 
 AGENT_PATHS = {
     "autopilot": "0xSDLC-autopilot/autopilot.md",
-    "project-bootstrap": "support/0xSDLC-bootstrap/bootstrap.md",
-    "specifier": "support/0xSDLC-spec/specification.md",
-    "auditor": "support/0xSDLC-audit/audit.md",
+    "project-bootstrap": "support/agents/0xSDLC-bootstrap/bootstrap.md",
+    "specifier": "support/agents/0xSDLC-spec/specification.md",
+    "auditor": "support/agents/0xSDLC-audit/audit.md",
     "architect": "0xSDLC-design/design.md",
     "task-planner": "0xSDLC-plan/planning.md",
     "implementer": "0xSDLC-implement/implementation.md",
-    "tester": "support/0xSDLC-test/testing.md",
-    "reviewer": "support/0xSDLC-review/review.md",
+    "tester": "support/agents/0xSDLC-test/testing.md",
+    "reviewer": "support/agents/0xSDLC-review/review.md",
     "maintainability-reviewer": "support/engineering-practices/maintainability-review.md",
-    "quality-control": "support/0xSDLC-quality/quality-assurance.md",
+    "quality-control": "support/agents/0xSDLC-quality/quality-assurance.md",
     "verifier": "0xSDLC-verify/verification.md",
     "fixer": "0xSDLC-fix/fix.md",
 }
@@ -83,6 +91,8 @@ def main() -> int:
     if manifest_path.exists():
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if manifest.get("schema_version") != "0.4":
+                errors.append("manifest must use schema_version 0.4")
             for agent in manifest.get("agents", []):
                 relative = AGENT_PATHS.get(agent)
                 if relative is None:
@@ -111,6 +121,23 @@ def main() -> int:
                 json.loads(path.read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError) as exc:
                 errors.append(f"invalid JSON: {relative}: {exc}")
+    for obsolete in (
+        "support/0xSDLC-audit",
+        "support/0xSDLC-bootstrap",
+        "support/0xSDLC-conventions",
+        "support/0xSDLC-intake",
+        "support/0xSDLC-quality",
+        "support/0xSDLC-review",
+        "support/0xSDLC-spec",
+        "support/0xSDLC-test",
+        "support/codex-skills",
+        "support/skills",
+        "run-instructions",
+    ):
+        if (ROOT / obsolete).exists():
+            errors.append(f"obsolete path remains: {obsolete}")
+    if (ROOT / "templates/tasks.md").exists():
+        errors.append("obsolete template remains: templates/tasks.md; use templates/plan.md")
     if errors:
         print("Harness validation failed:")
         print("\n".join(f"- {error}" for error in errors))

@@ -56,3 +56,13 @@ Write `implementation.md` using `templates/implementation.md`. Include changed f
 - [ ] Required tests or checks ran.
 - [ ] Failure behavior and important edge cases are covered.
 - [ ] Diff and secret/scope checks were performed.
+
+## Quality bar and failure handling
+
+Implement only the assigned slice and preserve a clean separation between source edits and evidence. If a precondition, plan detail, or approval is missing, stop before editing. If the baseline is failing, capture it separately and do not disguise it as a regression. A successful command is evidence only for the behavior it actually exercises.
+
+If implementation reveals a required design or scope change, stop with `needs-review`, record the discrepancy, and request a revised plan or approval. Do not patch around the contract.
+
+## Cost-aware context
+
+Load only the assigned task, criterion-linked inputs, target files, nearby tests, and project commands. Do not carry full prior transcripts into implementation.

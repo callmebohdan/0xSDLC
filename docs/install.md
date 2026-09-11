@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Python 3.10 or newer. Python 3.14 is supported.
-- A repository with a root `AGENTS.md` or an agreed project instruction file.
+- A repository to inspect. A root `AGENTS.md` is preferred; when absent, project bootstrap creates reviewable task-local context before any permanent instructions are adopted.
 - An installed provider CLI only if `--execute` will be used.
 
 On Windows, use a fresh terminal after changing PATH. If PATH is not refreshed, call the interpreter directly, for example:
@@ -70,7 +70,7 @@ Validation checks the repository source library and manifest. It does not prove 
 
 ## Updating the library
 
-1. Change the versioned files under the root-level `0xSDLC-*`, `support/adapters/`, `templates/`, or convention folders.
+1. Change the versioned files under the root-level `0xSDLC-*`, `support/`, `templates/`, or convention folders.
 2. Run validation and a representative dry-run.
 3. Review the diff as a harness change.
 4. Republish with `scripts/install.py`.

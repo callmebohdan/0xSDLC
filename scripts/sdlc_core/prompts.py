@@ -112,5 +112,5 @@ Perform only this phase. Write `{output_artifact or PHASE_ARTIFACTS.get(phase, f
 {practice_context(task_dir, phase, lane)}
 ## Global boundaries
 
-{library_path('support/0xSDLC-conventions/boundaries.md').read_text(encoding='utf-8')}
+{library_path('support/conventions/boundaries.md').read_text(encoding='utf-8')}
 """

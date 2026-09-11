@@ -14,16 +14,16 @@ MAX_TOTAL_FIX_ATTEMPTS = 4
 VALID_ARTIFACT_STATUS = {"ready", "needs-review", "blocked", "verified"}
 
 PHASE_CONTRACTS = {
-    "specify": "support/0xSDLC-spec/specification.md",
-    "audit": "support/0xSDLC-audit/audit.md",
+    "specify": "support/agents/0xSDLC-spec/specification.md",
+    "audit": "support/agents/0xSDLC-audit/audit.md",
     "design": "0xSDLC-design/design.md",
     "plan": "0xSDLC-plan/planning.md",
     "implement": "0xSDLC-implement/implementation.md",
-    "test": "support/0xSDLC-test/testing.md",
-    "review": "support/0xSDLC-review/review.md",
+    "test": "support/agents/0xSDLC-test/testing.md",
+    "review": "support/agents/0xSDLC-review/review.md",
     "verify": "0xSDLC-verify/verification.md",
     "fix": "0xSDLC-fix/fix.md",
-    "synthesis": "support/0xSDLC-conventions/parallel-synthesis.md",
+    "synthesis": "support/conventions/parallel-synthesis.md",
 }
 PHASE_ARTIFACTS = {
     "specify": "spec.md", "audit": "audit.md", "design": "design.md",

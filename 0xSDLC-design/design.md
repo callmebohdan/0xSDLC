@@ -50,6 +50,12 @@ Produce the smallest safe technical design that satisfies the spec within the ex
 
 Write `design.md` using `templates/design.md`. Each proposed change must link to a requirement or a risk. Mark decisions requiring human approval.
 
+## Failure handling and context cost
+
+Explain partial-failure behavior, recovery, and rollback wherever they can differ from the success path. Select a preferred approach instead of presenting unresolved options as a design. Stop with `needs-review` for an unapproved public contract, migration, dependency, security tradeoff, or irreversible action; stop with `blocked` when repository evidence is insufficient to choose safely.
+
+Read the specification, audit, relevant architecture entry points, and affected interfaces. Do not load unrelated modules or request parallel designs unless alternatives have materially different risk.
+
 ## Completion checklist
 
 - [ ] Approach satisfies every in-scope criterion.

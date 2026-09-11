@@ -34,6 +34,8 @@ Coding models are fast at producing output but can lose requirements, invent con
 - independent evaluator phases;
 - bounded fix loops.
 
+The current implementation is early L3 rather than full L3: it also has structured phase state, resumable routes, artifact metadata checks, and explicit approval records, but not crash-safe concurrency, measured token budgets, or policy-enforced tool permissions.
+
 ### Future level 4 work
 
 Do not add these merely because they sound advanced. Add them after real task evidence justifies them:
@@ -41,8 +43,8 @@ Do not add these merely because they sound advanced. Add them after real task ev
 - policy-enforced tool permissions;
 - parallel worktrees and conflict-aware merging;
 - conformance suites generated from specs;
-- telemetry, cost budgets, and model routing;
-- resumable multi-phase execution;
+- telemetry, measured cost budgets, and adaptive model routing;
+- crash-safe concurrency, locking, and cancellation;
 - provider health checks and cancellation.
 
 ## Supported work types
@@ -59,11 +61,11 @@ Do not add these merely because they sound advanced. Add them after real task ev
 
 ## Source and runtime locations
 
-- Root-level `0xSDLC-*`, `support/adapters/`, `templates/`, and `support/0xSDLC-conventions/`: versioned source contracts in this repository.
+- Root-level `0xSDLC-*`, `support/adapters/`, `support/integrations/`, `templates/`, and `support/conventions/`: versioned source contracts in this repository.
 - user-level `.agents/0xsdlc`: published copy for model CLIs that need a global location.
 - `.agents/0xsdlc/sessions/`: generated task briefs, prompts, reports, and adapter transcripts.
 - `scripts/`: dependency-free orchestration, installation, and validation utilities.
-- `docs/`: design rationale and rollout guidance.
+- `docs/`: design rationale, integrations, and operational guidance.
 
 ## Core principle
 

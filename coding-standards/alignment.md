@@ -8,9 +8,11 @@
 - Root `0xSDLC-*` folders contain the phase/subagent contracts.
 - `support/adapters/` contains provider translation contracts only.
 - `templates/` contains artifact schemas and agent-skill test templates.
-- `support/0xSDLC-conventions/` contains shared rules used by every phase.
+- `support/agents/` contains less-frequent phase agents and project bootstrap.
+- `support/conventions/` contains shared rules used by every phase.
 - `support/engineering-practices/` contains selectively loaded generic and language-specific engineering guidance.
-- `run-instructions/` contains how to load and execute agents.
+- `support/integrations/` contains portable wrappers and provider-specific metadata.
+- `docs/operations/` contains how to load and execute agents.
 - `orchestrator/` contains route/manifest and orchestration design.
 - `scripts/` contains dependency-free implementation utilities.
 - User-level `%USERPROFILE%\\.agents\\0xsdlc\\sessions` contains generated task state, reports, prompts, and transcripts.
@@ -25,7 +27,7 @@
 
 ## Review checklist
 
-- [ ] New phase behavior has a root `0xSDLC-*` contract.
+- [ ] Frequently used phase behavior has a root `0xSDLC-*` contract; less-frequent agents live under `support/agents/`.
 - [ ] New output has a template and validation rule.
 - [ ] New provider behavior is isolated in `support/adapters/`.
 - [ ] Python paths use the root-relative structure, not legacy paths.

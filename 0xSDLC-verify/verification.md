@@ -47,3 +47,13 @@ Write `verification.md` using `templates/verification.md`. If verified, include 
 - [ ] Review findings and failed checks are resolved or accepted.
 - [ ] Approvals and residual risks are recorded.
 - [ ] Final status is justified, not optimistic.
+
+## Quality bar and failure handling
+
+Verification is an independent acceptance decision. Require a direct evidence row for every criterion, including negative behavior, permissions, compatibility, and operational constraints when applicable. Treat missing, stale, contradictory, or model-only evidence as a gap.
+
+Use `needs-review` for unresolved human decisions or accepted risks and `blocked` when required proof cannot be obtained. If a fix is needed, identify the finding and return it to the bounded fix loop; do not edit source during verification.
+
+## Cost-aware context
+
+Load the specification, route, implementation/test/review artifacts, current diff, and only the source needed to validate disputed criteria. Reuse existing test evidence instead of rerunning unchanged expensive suites.

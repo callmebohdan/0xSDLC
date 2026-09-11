@@ -20,7 +20,7 @@ Some identifiers remain lowercase because changing them would break compatibilit
 
 | Identifier | Why it stays lowercase |
 | --- | --- |
-| `$0xsdlc-*`, `/0xsdlc-*`, and `support/skills/0xsdlc-*` | Provider skill IDs are machine-facing slugs; lowercase is the most portable form across Codex, Claude Code, Cursor, filesystems, and future adapters. |
+| `$0xsdlc-*`, `/0xsdlc-*`, and `support/integrations/portable-skills/0xsdlc-*` | Provider skill IDs are machine-facing slugs; lowercase is the most portable form across Codex, Claude Code, Cursor, filesystems, and future adapters. |
 | `.agents/0xsdlc` | This is the established runtime and session location. Renaming it would split existing installations and task history, and case-only paths behave differently across operating systems. |
 | `scripts/sdlc_core` | Python import identifiers cannot start with a digit and should remain conventional lowercase module names. |
 | `0XSDLC_*` | Environment variables conventionally use uppercase ASCII with underscores. |

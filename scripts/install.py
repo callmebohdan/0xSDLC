@@ -10,8 +10,8 @@ from pathlib import Path
 
 
 SOURCE = Path(__file__).resolve().parents[1]
-SKILLS_SOURCE = SOURCE / "support" / "skills"
-CODEX_METADATA_SOURCE = SOURCE / "support" / "codex-skills"
+SKILLS_SOURCE = SOURCE / "support" / "integrations" / "portable-skills"
+CODEX_METADATA_SOURCE = SOURCE / "support" / "integrations" / "codex" / "metadata"
 SKILL_NAMES = ("0xsdlc-autopilot", "0xsdlc-agent", "0xsdlc-bootstrap")
 PUBLISH_PATHS = [
     "AGENTS.md",
@@ -29,7 +29,6 @@ PUBLISH_PATHS = [
     "0xSDLC-plan",
     "0xSDLC-verify",
     "orchestrator",
-    "run-instructions",
 ]
 
 
@@ -87,7 +86,7 @@ def install_skills(source_root: Path, target: Path, force: bool, *, codex_metada
             remove_published_path(destination, target)
         shutil.copytree(source, destination)
         if codex_metadata:
-            metadata = CODEX_METADATA_SOURCE / name / "agents"
+            metadata = CODEX_METADATA_SOURCE / name
             if metadata.is_dir():
                 shutil.copytree(metadata, destination / "agents", dirs_exist_ok=True)
 
@@ -108,7 +107,14 @@ def main() -> int:
     parser.add_argument("--codex-skills-dir", type=Path, default=default_codex_skills())
     parser.add_argument("--claude-skills-dir", type=Path, default=default_claude_skills())
     parser.add_argument("--cursor-skills-dir", type=Path, default=default_cursor_skills())
-    parser.add_argument("--shared-skills-dir", type=Path, default=default_shared_skills())
+    parser.add_argument(
+        "--portable-skills-dir",
+        "--shared-skills-dir",
+        dest="portable_skills_dir",
+        type=Path,
+        default=default_shared_skills(),
+        help="portable skill directory (default: user-level .agents/skills)",
+    )
     parser.add_argument(
         "--skip-codex-skills",
         action="store_true",
@@ -144,7 +150,7 @@ def main() -> int:
         targets = [
             ("Claude Code", args.claude_skills_dir.expanduser().resolve(), False),
             ("Cursor", args.cursor_skills_dir.expanduser().resolve(), False),
-            ("portable", args.shared_skills_dir.expanduser().resolve(), False),
+            ("portable", args.portable_skills_dir.expanduser().resolve(), False),
         ]
         if not args.skip_codex_skills:
             targets.insert(0, ("Codex", codex_target, True))

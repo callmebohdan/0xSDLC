@@ -1,6 +1,6 @@
 # Cursor adapter
 
-Use this file as the Cursor-specific translation layer when Cursor is the execution surface. The root-level `0xSDLC-*` contracts, `support/0xSDLC-conventions/`, and templates remain authoritative.
+Use this file as the Cursor-specific translation layer when Cursor is the execution surface. The root-level `0xSDLC-*` contracts, `support/conventions/`, and templates remain authoritative.
 
 ## Invocation model
 

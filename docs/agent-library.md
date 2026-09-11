@@ -9,11 +9,11 @@ The library is deliberately model-neutral. A provider adapter may translate thes
 The orchestrator and every model session should load only the smallest useful context:
 
 1. Read the repository's root `AGENTS.md` when present. Otherwise use the task-local project context and consider the bootstrap agent for recurring work.
-2. Read `support/0xSDLC-conventions/phase-protocol.md` and `support/0xSDLC-conventions/boundaries.md` once for the current task.
+2. Read `support/conventions/phase-protocol.md` and `support/conventions/boundaries.md` once for the current task.
 3. Read the current subagent contract from the relevant root-level `0xSDLC-*` folder.
 4. Read the current task brief and only the artifacts listed by that contract.
 5. Read the relevant template in `templates/` before writing the output artifact.
-6. Read `support/0xSDLC-conventions/evidence-and-status.md` before declaring a result.
+6. Read `support/conventions/evidence-and-status.md` before declaring a result.
 
 Do not paste the entire library into every prompt. The common contracts are reusable rules; the phase contract is the active instruction; the task artifacts are the current state.
 
@@ -22,7 +22,7 @@ Do not paste the entire library into every prompt. The common contracts are reus
 | Phase | Agent | Primary question | Required output |
 | --- | --- | --- | --- |
 | Specify | `specifier` | What outcome, boundary, and observable behavior define success? | `spec.md` |
-| Discover | `auditor` | What does this repository already provide? | `audit.md` |
+| Audit | `auditor` | What does this repository already provide, and what constraints matter? | `audit.md` |
 | Design | `architect` | What is the smallest safe technical design? | `design.md` |
 | Plan | `task-planner` | What are the smallest verifiable implementation slices? | `plan.md` |
 | Implement | `implementer` | How do we change one slice safely? | code + `implementation.md` |

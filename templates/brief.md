@@ -1,9 +1,9 @@
 ---
 schema_version: "0.2"
 task_id: "{{task_id}}"
-phase: "intake"
+phase: "brief"
 status: "ready"
-agent: "intake"
+agent: "autopilot"
 inputs: []
 assumptions: []
 ---
@@ -58,7 +58,7 @@ assumptions: []
 
 - None, or:
 
-## Intake decision
+## Routing decision
 
 - Classification: `small` / `standard` / `high-risk`
 - Status: `ready` / `needs-review` / `blocked`
