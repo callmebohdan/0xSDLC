@@ -70,6 +70,14 @@ def prompt_for(
     if not contract.is_file():
         contract = library_path("support/adapters/generic.md")
     route = json.loads((task_dir / "route.json").read_text(encoding="utf-8"))
+    mode_guard = ""
+    if route.get("mode") in {"diagnose", "assessment"}:
+        mode_guard = (
+            f"\n## Read-only route boundary ({route['mode']})\n\n"
+            "Do not edit product source, tests, configuration, or project instructions. "
+            "Do not add implementation or repair phases. Preserve findings as evidence and recommendations only. "
+            "The orchestrator will not run implementation or automatic repair for this route.\n"
+        )
     names = sorted(path.name for path in task_dir.iterdir() if path.is_file() and not path.name.startswith("adapter-"))
     project_instructions = workspace / "AGENTS.md"
     project_context = ""
@@ -99,6 +107,7 @@ Perform only this phase. Write `{output_artifact or PHASE_ARTIFACTS.get(phase, f
 ```json
 {json.dumps(route, indent=2)}
 ```
+{mode_guard}
 
 ## Available task artifacts
 

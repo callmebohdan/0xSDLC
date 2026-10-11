@@ -28,10 +28,13 @@ Do not paste the entire library into every prompt. The common contracts are reus
 | Implement | `implementer` | How do we change one slice safely? | code + `implementation.md` |
 | Test | `tester` | Does the change behave correctly and regress safely? | `test-report.md` |
 | Review | `reviewer` | What could still be wrong, risky, or out of contract? | `review.md` |
+| Quality control | `quality-control` | Is evidence complete, current, reproducible, and gate-compliant? | `quality-report.md` |
 | Verify | `verifier` | Can every acceptance criterion be proven? | `verification.md` |
 | Fix | `fixer` | What is the smallest evidence-backed correction? | `fix-report.md` |
 
-The default workflow is sequential. `brief.md` is created deterministically, so intake is folded into specification rather than run as a default model phase. Parallel audit/review is opt-in and requires a separate synthesis artifact; implementation work may be parallel only with non-overlapping files or separate workspaces.
+The default workflow is sequential. `brief.md` is created deterministically, so intake is folded into specification rather than run as a default model phase. `quality-control` is executable but opt-in via `--quality-control`; it adds one call after review and is reserved for evidence-integrity/high-assurance needs. Parallel audit/review is opt-in and requires a separate synthesis artifact; implementation work may be parallel only with non-overlapping files or separate workspaces.
+
+Task intent is separate from risk: `change` uses the small/standard/high-risk change routes; `diagnose` uses `audit → test → review → verify`; `assessment` uses `specify → audit → [design] → plan → review → verify`. Read-only routes omit implementation and do not auto-repair findings.
 
 ## Artifact rules
 
@@ -44,9 +47,11 @@ The default workflow is sequential. `brief.md` is created deterministically, so 
 ## Status vocabulary
 
 - `ready`: the artifact is complete enough for the next phase.
-- `needs-review`: a human decision, ambiguity, or high-impact approval is required.
+- `needs-review`: a human decision, ambiguity, or residual-risk acceptance is required; high-impact approval uses the explicit gate.
 - `blocked`: safe progress is impossible with the current inputs, permissions, or environment.
 - `verified`: reserved for final verification after every required criterion has evidence.
+
+These are artifact values, not the `route.json` states. Route and phase-state status semantics are defined in `support/conventions/output-contract.md`; `needs-approval` is the explicit human gate, while `needs-review` means human judgment/resolution is required.
 
 ## Context budget rules
 

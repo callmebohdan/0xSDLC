@@ -13,8 +13,9 @@ if str(SCRIPT_DIR) not in sys.path:
 from sdlc_core.artifacts import parse_front_matter, validate_artifact
 from sdlc_core.cli import build_parser, main, now_id, slugify
 from sdlc_core.providers import validate_profiles
-from sdlc_core.routing import classify, migrate_route, needs_design, route_for, route_payload
+from sdlc_core.routing import classify, infer_mode, migrate_route, needs_design, route_for, route_payload
 from sdlc_core.runner import review_decision, run_full_cycle, run_phase, transition
+from sdlc_core.schemas import validate_route
 from sdlc_core.storage import TaskLock, recover_interrupted, write_text
 
 

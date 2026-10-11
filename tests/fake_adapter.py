@@ -31,11 +31,18 @@ def main() -> int:
     status = "verified" if phase == "verify" else "ready"
     if mode == "blocked" and phase == "audit":
         status = "blocked"
+    if mode == "needs-review" and phase == "audit":
+        status = "needs-review"
     metadata = ["---", 'schema_version: "0.2"', f'task_id: "{task_id}"', f'phase: "{phase}"', f'status: "{status}"']
     if phase == "review":
         first_review = args.output_artifact == "review.md"
-        decision = "fix" if mode == "fix-loop" and first_review else "approve"
+        decision = "fix" if mode == "fix-loop" and first_review else "needs-review" if mode == "review-needs-review" and first_review else "approve"
         metadata.extend([f'decision: "{decision}"', 'blocking_findings: ["F-001"]' if decision == "fix" else "blocking_findings: []"])
+    if phase == "test":
+        failed = mode == "test-failure" and args.output_artifact == "test-report.md"
+        metadata.append(f'test_outcome: "{"fail" if failed else "pass"}"')
+        if failed:
+            metadata.append('blocking_findings: ["T-001"]')
     if phase == "synthesis" and "review" in args.prompt_file.name:
         metadata.extend(['decision: "approve"', "blocking_findings: []"])
     if mode == "route-upgrade" and phase == "audit":

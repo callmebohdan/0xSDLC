@@ -21,6 +21,7 @@ Produce an honest test report for the implemented slice against the specificatio
 7. Record skipped tests, unavailable services, flaky observations, timeouts, and environmental limitations.
 8. For C++ and other systems code, run configured compiler diagnostics and relevant sanitizer/static-analysis targets when the changed risk warrants them; record configuration and platform limitations.
 9. Recommend `ready`, `needs-review`, or `blocked` based on evidence.
+10. In schema 0.2 test reports, set `test_outcome` to `pass`, `fail`, or `needs-review`. Use `fail` only for a reproduced product/test failure and include stable `blocking_findings` IDs for each actionable blocker. Use `needs-review` when the outcome is ambiguous, environmental, or cannot be safely assigned to a product finding; do not label unavailable validation as pass.
 
 ## Test selection rules
 

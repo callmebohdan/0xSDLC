@@ -11,6 +11,10 @@ Route one engineering request through the smallest safe, evidence-backed develop
 | Small | audit → plan → implement → test → review → verify | isolated, reversible work with an existing pattern |
 | Standard | specify → audit → [design] → plan → implement → test → review → verify | normal feature, defect, or multi-file change |
 | High-risk | specify → audit → design → plan → approval → implement → test → review → verify | security, data, production, public contract, payment, migration, deletion, or other irreversible impact |
+| Diagnosis | audit → test → review → verify | investigate a symptom without authorization to change product code |
+| Assessment | specify → audit → [design] → plan → review → verify | evaluate a repository, harness, or proposal and recommend action without implementation |
+
+Task intent (`change`, `diagnose`, or `assessment`) is distinct from risk classification (`small`, `standard`, or `high-risk`). Use `--mode` to select intent explicitly when automatic wording-based inference is not unambiguous. Read-only routes never add `implement`; a failed diagnostic test is reported for human action and does not trigger an automatic fixer.
 
 The bracketed design phase is a decision record, not ceremony. Include it for architecture, integrations, cross-module behavior, data/control-flow changes, material alternatives, or uncertain compatibility. Omit it when audit and plan can safely describe one obvious local change. The user may force either choice for non-high-risk work; high-risk work always includes design.
 
@@ -21,16 +25,16 @@ Fold intake into `specify`: the brief is captured deterministically and the spec
 1. Create exactly one directory under `%USERPROFILE%\.agents\0xsdlc\sessions\YYYY-MM-DD_short-description_8hex`.
 2. Persist the verbatim request in `brief.md` and route, rationale, phase state, approvals, attempts, and events in `route.json` before any adapter call.
 3. Each phase writes the requested Markdown artifact with `task_id`, `phase`, and controlled `status` front matter. A missing or invalid artifact blocks the route.
-4. State transitions are recorded atomically. Valid phase states are `pending`, `running`, `succeeded`, `blocked`, `needs-approval`, and `skipped`.
+4. State transitions are recorded atomically. Phase states are `pending`, `running`, `succeeded`, `failed`, `blocked`, `needs-approval`, `needs-review`, and `skipped`.
 5. Resume from the same directory. Do not recreate or overwrite prior artifacts to make a route appear clean.
 
-Route schema `0.4` and artifact schema `0.2` are current. Existing route `0.2`/`0.3` and artifact `0.1` state remains readable through explicit migration rules. Unknown schema versions stop instead of being guessed into compatibility.
+Route schema `0.5` and artifact schema `0.2` are current. Existing route `0.2`–`0.4` and artifact `0.1` state remains readable through explicit migration rules. Unknown schema versions stop instead of being guessed into compatibility.
 
 ## Execution and stop rules
 
 - Load current phase contract, brief, route, project `AGENTS.md`, listed artifacts, and only relevant source. Do not paste the whole library or conversation into every prompt.
 - Run one phase at a time and preserve adapter stdout/stderr. Record commands, paths, result summaries, assumptions, and limitations.
-- A phase reports `blocked` when it cannot proceed safely; `needs-review` when a human choice or approval is required. Autopilot stops in both cases.
+- A phase reports `blocked` when required inputs or safe execution are unavailable. `needs-review` means a human decision or review resolution is required. `needs-approval` is reserved for the explicit approval gate. Autopilot stops in each case; these statuses are not interchangeable.
 - For high-risk or explicitly gated work, stop after plan/design. A human approval states scope and constraints; silence is not approval.
 - Test proves behavior at a chosen level. Review independently searches for defects and weak evidence. Verify maps each required acceptance criterion to current evidence; neither test nor review alone is final verification.
 - Audit, design, or plan evidence may add a safer `design` or `approval` phase. Every accepted route change records its source and reason; agents may not dynamically remove a required gate.
@@ -38,7 +42,7 @@ Route schema `0.4` and artifact schema `0.2` are current. Existing route `0.2`/`
 
 ## Review and fix loop
 
-`review.md` uses `decision: approve | fix | needs-review`. A `fix` decision must name stable `blocking_findings` IDs. Autopilot runs `fix → test → review`, retaining `fix-report-1.md`, `test-report-1.md`, `review-1.md`, and later attempts rather than overwriting history.
+`review.md` uses `decision: approve | fix | needs-review`. A `fix` decision must name stable `blocking_findings` IDs. Version 0.2 test artifacts use `test_outcome: pass | fail | needs-review`; `fail` must name stable blocking IDs. In change mode, a failed test enters the same bounded `fix → test → review` repair loop as a review finding. Diagnosis and assessment routes never invoke implementation or automatic repair. Numbered loop reports preserve earlier attempts.
 
 It allows two attempts per stable finding and four attempts per route. If stable IDs are missing, a finding persists past its cap, or the reviewer asks for a human decision, autopilot ends at `needs-review`. It never repeats a product failure with an unchanged prompt.
 
@@ -47,6 +51,8 @@ It allows two attempts per stable finding and four attempts per route. If stable
 `--parallel-checks` is opt-in. It adds an independent audit lane and review lane, then a separate synthesis call for each pair. The synthesis reconciles disagreement, keeps the stricter evidence-backed conclusion, and records whether the extra call changed confidence. This costs four extra model calls; reserve it for high-impact or high-uncertainty work.
 
 `--maintainability-review` is a narrower opt-in. It adds one focused review lane plus synthesis, costing two extra calls. Use it for reusable libraries, architectural changes, public interfaces, performance/concurrency-sensitive code, or explicit maintainability concerns. It is not a formatting agent: deterministic project tools handle mechanical style. When combined with `--parallel-checks`, all three review reports share one synthesis, for five extra calls across the route rather than six.
+
+`--quality-control` adds one opt-in evidence-integrity phase after review. It checks traceability, freshness, reproducibility, approvals, and release-risk evidence; it does not repeat line-by-line review and is not part of the default route.
 
 ## Engineering practices
 

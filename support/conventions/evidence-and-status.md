@@ -32,11 +32,13 @@ Do not include secrets in command lines or reports. Redact tokens, cookies, priv
 
 Use `ready` when the phase output is complete and its known limitations do not block the next phase.
 
-Use `needs-review` when a human must choose between valid options, approve a high-impact action, resolve a product ambiguity, accept a known risk, or decide whether a baseline failure is in scope.
+Use `needs-review` when a human must choose between valid options, resolve a product ambiguity, accept a known residual risk, or decide whether a baseline failure is in scope. High-impact authorization uses the explicit route approval phase and `approval.md`, not artifact status.
 
 Use `blocked` when the phase cannot be completed safely or honestly because a required input, permission, tool, fixture, or environment capability is missing.
 
 Use `verified` only in `verification.md`, after every required acceptance criterion has a current evidence entry and no unresolved blocker remains. Passing tests alone does not imply `verified`.
+
+Artifact status, phase-state status, and route status are separate vocabularies. `needs-approval` means the explicit approval gate is waiting; `needs-review` means human judgment or resolution is required. Never map one to the other. A `failed` phase state records an execution/test outcome; `blocked` means the route cannot safely continue without intervention.
 
 ## Failure classification
 

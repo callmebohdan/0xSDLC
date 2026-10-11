@@ -61,6 +61,7 @@ assumptions: []
 ## Routing decision
 
 - Classification: `small` / `standard` / `high-risk`
+- Intent mode: `{{mode}}`
 - Status: `ready` / `needs-review` / `blocked`
 - Reason:
 

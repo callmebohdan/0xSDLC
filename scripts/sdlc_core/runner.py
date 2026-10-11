@@ -40,7 +40,7 @@ def transition(route_path: Path, route: dict[str, Any], phase: str, status: str,
         state["finished_at"] = now
     state.update(details)
     route["current_phase"] = phase
-    route["status"] = {"running": "running", "succeeded": "phase-completed", "failed": "blocked", "blocked": "blocked", "needs-approval": "needs-approval", "skipped": "phase-completed"}.get(status, route["status"])
+    route["status"] = {"running": "running", "succeeded": "phase-completed", "failed": "blocked", "blocked": "blocked", "needs-approval": "needs-approval", "needs-review": "needs-review", "skipped": "phase-completed"}.get(status, route["status"])
     route.setdefault("events", []).append({"event": f"phase-{status}", "phase": phase, "from": previous, "at": now, **details})
     save_route(route_path, route)
 
@@ -166,7 +166,7 @@ def run_phase(
         _record_call(task_dir, route, phase, lane, model, result, duration)
     if any(result for result, _ in results):
         save_route(route_path, route)
-        transition(route_path, route, phase, "blocked", reason="adapter failure")
+        transition(route_path, route, phase, "failed", reason="adapter failure")
         return next(result for result, _ in results if result)
     try:
         metadata = {artifact: validate_artifact(task_dir / artifact, task_dir.name, phase) for _, artifact in lanes}
@@ -174,11 +174,12 @@ def run_phase(
         save_route(route_path, route)
         transition(route_path, route, phase, "blocked", reason=f"invalid required artifact: {exc}")
         return 3
+    state["last_artifact"] = primary
     if any(item["status"] == "blocked" for item in metadata.values()):
         transition(route_path, route, phase, "blocked", reason="phase artifact reports blocked")
         return 3
     if any(item["status"] == "needs-review" for item in metadata.values()):
-        transition(route_path, route, phase, "needs-approval", reason="phase artifact requires human review")
+        transition(route_path, route, phase, "needs-review", reason="phase artifact requires human review")
         return 4
     apply_route_directives(route, metadata[primary], phase)
     if len(lanes) > 1:
@@ -201,21 +202,38 @@ def review_decision(task_dir: Path, route: dict[str, Any]) -> tuple[str, list[st
     return metadata.get("decision", "needs-review"), list_value(metadata.get("blocking_findings"))
 
 
-def run_review_fix_loop(
+def test_decision(task_dir: Path, route: dict[str, Any]) -> tuple[str, list[str]]:
+    state = route["phase_states"]["test"]
+    artifact = state.get("last_artifact", "test-report.md")
+    metadata = parse_front_matter(task_dir / artifact)
+    outcome = metadata.get("test_outcome")
+    if outcome == "pass":
+        return "approve", []
+    if outcome == "fail":
+        return "fix", list_value(metadata.get("blocking_findings"))
+    return "needs-review", list_value(metadata.get("blocking_findings"))
+
+
+def run_fix_loop(
     task_dir: Path,
     workspace: Path,
     route: dict[str, Any],
     model: str,
     parallel_checks: bool,
     maintainability_review: bool,
+    source_phase: str = "review",
 ) -> int:
     route_path = task_dir / "route.json"
     while True:
-        decision, findings = review_decision(task_dir, route)
+        decision, findings = test_decision(task_dir, route) if source_phase == "test" else review_decision(task_dir, route)
         if decision == "approve":
             return 0
         if decision != "fix" or not findings:
-            route.update({"status": "needs-review", "blocked_reason": "review requires a human decision or stable blocking findings"})
+            route.update({"status": "needs-review", "blocked_reason": f"{source_phase} requires a human decision or stable blocking finding IDs"})
+            save_route(route_path, route)
+            return 4
+        if route.get("mode", "change") != "change":
+            route.update({"status": "needs-review", "blocked_reason": "read-only route found a product issue; implementation is not permitted"})
             save_route(route_path, route)
             return 4
         history, total = route.setdefault("finding_attempts", {}), route.get("fix_attempts", 0)
@@ -230,20 +248,29 @@ def run_review_fix_loop(
         for finding in findings:
             history[finding] = history.get(finding, 0) + 1
         route.setdefault("fix_history", []).append({"attempt": attempt, "findings": findings, "at": utc_now()})
+        route.setdefault("events", []).append({
+            "event": "repair-loop-started", "source_phase": source_phase, "attempt": attempt,
+            "findings": findings, "at": utc_now(),
+            "reason": f"{source_phase} reported stable blocking findings",
+        })
         save_route(route_path, route)
-        for current, artifact in (("fix", f"fix-report-{attempt}.md"), ("test", f"test-report-{attempt}.md"), ("review", f"review-{attempt}.md")):
-            result = run_phase(
-                task_dir,
-                workspace,
-                route,
-                current,
-                model,
-                parallel_checks if current == "review" else False,
-                artifact,
-                maintainability_review if current == "review" else False,
-            )
-            if result:
-                return result
+        result = run_phase(task_dir, workspace, route, "fix", model, output_artifact=f"fix-report-{attempt}.md")
+        if result:
+            return result
+        result = run_phase(task_dir, workspace, route, "test", model, output_artifact=f"test-report-{attempt}.md")
+        if result:
+            return result
+        test_result, _ = test_decision(task_dir, route)
+        if test_result != "approve":
+            source_phase = "test"
+            continue
+        result = run_phase(
+            task_dir, workspace, route, "review", model, parallel_checks,
+            f"review-{attempt}.md", maintainability_review,
+        )
+        if result:
+            return result
+        source_phase = "review"
 
 
 def run_full_cycle(
@@ -268,8 +295,14 @@ def run_full_cycle(
         result = run_phase(task_dir, workspace, route, phase, model, parallel_checks, maintainability_review=maintainability_review)
         if result:
             return 0 if result == 4 else result
+        if phase == "test":
+            decision, _ = test_decision(task_dir, route)
+            if decision != "approve":
+                result = run_fix_loop(task_dir, workspace, route, model, parallel_checks, maintainability_review, "test")
+                if result:
+                    return 0 if result == 4 else result
         if phase == "review":
-            result = run_review_fix_loop(task_dir, workspace, route, model, parallel_checks, maintainability_review)
+            result = run_fix_loop(task_dir, workspace, route, model, parallel_checks, maintainability_review)
             if result:
                 return 0 if result == 4 else result
         index += 1

@@ -11,10 +11,10 @@
 | Specification | brief/spec artifacts and acceptance criteria | automated criterion linting |
 | Planning | design and implementation plan contracts | dependency/DAG validation |
 | Execution | provider command adapters and scoped phase prompts | provider health, cancellation, and time budgets |
-| State | route status, phase status, attempts, events, approval records, resume command | atomic writes, locks, and crash recovery |
+| State | atomic route writes with backups, exclusive per-task lock, phase/event records, interrupted-run recovery, durable approvals, resume command | lease-based multi-host ownership, cancellation, and recovery across external workers |
 | Verification | separate test, review, and verify phases, artifact metadata checks | independent evaluator quality checks and criterion linting |
-| Recovery | bounded fix → test → review loop with per-finding and total attempt caps | finding deduplication and automatic regression-test synthesis |
-| Cost control | minimal default route and opt-in parallelism with documented call costs | measured token/call budgets and cancellation |
+| Recovery | bounded fix → test → review loop for stable test/review findings, per-finding and total attempt caps, numbered evidence | finding deduplication and automatic regression-test synthesis |
+| Cost control | minimal default route, opt-in parallel lanes/quality gate, call counts and optional token/cost sidecars | enforced token/call budgets and cancellation |
 | Safety | human gates and evidence rules | policy-enforced tool permissions |
 
 ## Design principles
@@ -31,4 +31,4 @@ The harness satisfies the practical L2 bar: every phase has a clear input/output
 
 ## L3 backlog
 
-Prioritize atomic crash-safe resume, deterministic fake-adapter tests, measurable call/token budgets, review-finding IDs, and stronger synthesis of parallel lanes before adding more agents or providers.
+Prioritize multi-host leases/cancellation, enforceable measured budgets, evaluator quality and real-project baselines, review-finding deduplication, and stronger synthesis of parallel lanes before adding more agents or providers. Atomic replacement, single-task locking, interruption marking, deterministic fake-adapter scenarios, and bounded fix IDs already exist; do not report those foundations as missing.

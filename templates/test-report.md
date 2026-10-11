@@ -3,6 +3,7 @@ schema_version: "0.2"
 task_id: "{{task_id}}"
 phase: "test"
 status: "ready"
+test_outcome: "pass"
 agent: "tester"
 inputs: ["spec.md", "implementation.md", "audit.md"]
 assumptions: []
@@ -53,5 +54,7 @@ assumptions: []
 ## Recommendation
 
 - Status: `ready` / `needs-review` / `blocked`
+- Test outcome: `pass` / `fail` / `needs-review`
+- Stable `blocking_findings` IDs when outcome is `fail` (required for bounded automatic repair)
 - Reason:
 - Next action:

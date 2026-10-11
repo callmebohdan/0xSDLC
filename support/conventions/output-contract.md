@@ -41,11 +41,25 @@ Every report must contain, in an order appropriate to its template:
 ## Status values
 
 - `ready`: output is complete enough for the next phase.
-- `needs-review`: a human decision, ambiguity, approval, or accepted risk is required.
+- `needs-review`: a human decision, ambiguity, or residual-risk acceptance is required; high-impact authorization uses the explicit approval gate.
 - `blocked`: safe or honest progress is impossible with current inputs or environment.
 - `verified`: only `verification.md` may use this for a fully evidenced final decision.
 
 Do not use `done`, `complete`, `passed`, or `looks-good` as substitutes for the controlled vocabulary.
+
+## Status layers
+
+The same phrase may appear at different layers; keep these vocabularies distinct:
+
+| Layer | Values | Meaning |
+| --- | --- | --- |
+| Artifact `status` | `ready`, `needs-review`, `blocked`, `verified` | Whether the Markdown deliverable is complete, needs a human decision, cannot proceed, or is final verification. |
+| Phase-state `status` in `route.json` | `pending`, `running`, `succeeded`, `failed`, `blocked`, `needs-approval`, `needs-review`, `skipped` | The lifecycle state of one orchestrated phase. `failed` records a phase whose adapter/execution failed; `blocked` means required evidence or a safety condition prevents continuation. |
+| Route `status` in `route.json` | `prepared`, `running`, `phase-completed`, `blocked`, `needs-approval`, `needs-review`, `completed` | Overall workflow state. |
+
+Use `needs-approval` only for the explicit human approval phase before gated work. Use `needs-review` when an artifact, review decision, or unresolved finding needs human judgment; it must not be converted to approval implicitly. A route stopped at `needs-review` cannot be resumed as if approved: record a human resolution with `resume --resolve-review "..."`, preserve the prior report, and rerun the stopped phase. An approval gate is separately recorded with `approval.md` and `--approve`.
+
+Version 0.2 test reports must set `test_outcome: pass | fail | needs-review`. `fail` requires stable `blocking_findings` IDs. Only change-mode routes may automatically fix a failed test; other modes preserve the diagnostic evidence and stop for a human.
 
 ## Evidence rules
 

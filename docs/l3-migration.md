@@ -7,8 +7,8 @@
 | Foundation | Current behavior | L3 extension point |
 | --- | --- | --- |
 | Modular runner | canonical `scripts/0xSDLC.py` delegates to `scripts/sdlc_core/` | policies evolve behind one stable command |
-| Schemas | route `0.4`, artifact `0.2`, and route `0.2`/`0.3` migration | add explicit migration fixtures for each release |
-| Recovery | atomic writes, route backup, task lock, interrupted-phase recovery | leases for remote or multi-host workers |
+| Schemas | route `0.5`, artifact `0.2`, route `0.2`–`0.4` migration | add explicit migration fixtures for each release |
+| Recovery | atomic replacement, route backup, exclusive per-task lock, interrupted-phase recovery | leases/cancellation for remote or multi-host workers |
 | Provider capabilities | generic, Codex, Claude, Cursor profiles and structural checks | live versioned conformance and capability-aware routing |
 | Evaluation | deterministic fake adapter and failure scenarios | real-project quality/cost baselines |
 | Telemetry | local latency/exit records and optional token/cost sidecars | measured budget policies and dashboards |
@@ -20,7 +20,7 @@
 
 The runner does not autonomously choose models by measured quality/cost, schedule implementation workers, invalidate all downstream evidence after arbitrary source changes, or prove live provider discovery on every host. Add these only against evaluation failures and real usage data.
 
-Empty placeholders are intentionally avoided. Every extension point above has an executable contract or test; future behavior can replace policy behind the same interface.
+Empty placeholders are intentionally avoided. Every extension point above has a contract or deterministic scenario where applicable; future behavior can replace policy behind the same interface.
 
 ## Promotion criteria
 

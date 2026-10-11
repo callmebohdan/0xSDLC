@@ -11,11 +11,11 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from .config import BASE_PHASES, library_path, sessions_root
+from .config import ALLOWED_TRANSITIONS, BASE_PHASES, ROUTE_SCHEMA_VERSION, library_path, sessions_root
 from .project import agents_draft, project_profile
 from .prompts import prompt_for
 from .providers import select_model, validate_profiles
-from .routing import classify, migrate_route, needs_design, route_payload
+from .routing import classify, infer_mode, migrate_route, needs_design, route_payload
 from .runner import run_full_cycle, run_phase, save_route, transition
 from .schemas import validate_route
 from .storage import TaskLock, read_json, recover_interrupted, utc_now, write_json, write_text
@@ -46,6 +46,7 @@ def create_task(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], s
     task_dir = tasks / task_id
     task_dir.mkdir()
     model, kind = select_model(args.model), args.kind or classify(args.request)
+    mode = infer_mode(args.request, args.mode)
     include_design = True if kind == "high-risk" else (args.design if args.design is not None else needs_design(args.request, kind))
     route = route_payload(
         task_id,
@@ -56,6 +57,8 @@ def create_task(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], s
         args.approval or kind == "high-risk",
         str(workspace),
         args.maintainability_review,
+        mode,
+        args.quality_control,
     )
     if args.maintainability_review:
         route["events"].append({
@@ -63,7 +66,7 @@ def create_task(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], s
             "at": utc_now(),
             "reason": "human requested focused maintainability review",
         })
-    write_text(task_dir / "brief.md", render_template(library_path("templates/brief.md"), {"task_id": task_id, "request": args.request}))
+    write_text(task_dir / "brief.md", render_template(library_path("templates/brief.md"), {"task_id": task_id, "request": args.request, "mode": mode}))
     profile = project_profile(workspace)
     write_json(task_dir / "project-profile.json", profile)
     if not (workspace / "AGENTS.md").is_file():
@@ -89,7 +92,7 @@ def cmd_autopilot(args: argparse.Namespace) -> int:
     except (OSError, ValueError) as exc:
         print(f"Cannot prepare task: {exc}", file=sys.stderr)
         return 2
-    print(f"Task: {task_dir.name}\nWorkspace: {workspace}\nClassification: {route['classification']}\nModel adapter: {model}\nRoute: {' -> '.join(route['phases'])}\nArtifacts: {task_dir}")
+    print(f"Task: {task_dir.name}\nWorkspace: {workspace}\nClassification: {route['classification']}\nMode: {route['mode']}\nModel adapter: {model}\nRoute: {' -> '.join(route['phases'])}\nArtifacts: {task_dir}")
     if not args.execute:
         print(f"Prepared prompt: {task_dir / ('prompt-' + route['current_phase'] + '.md')}")
         return 0
@@ -123,6 +126,44 @@ def cmd_resume(args: argparse.Namespace) -> int:
             if migrations or recovered:
                 save_route(task_dir / "route.json", route)
             validate_route(route)
+            if route.get("status") == "needs-review":
+                if not args.resolve_review:
+                    print("Task is waiting for a human review resolution. Resume with --resolve-review and record the decision.", file=sys.stderr)
+                    return 2
+                phase = route.get("current_phase")
+                if phase not in route.get("phase_states", {}):
+                    raise ValueError("needs-review route has no current phase to reopen")
+                state = route["phase_states"][phase]
+                if state.get("status") in {"succeeded", "needs-review"}:
+                    previous_state = state["status"]
+                    if previous_state == "succeeded" and "pending" not in ALLOWED_TRANSITIONS.get("succeeded", set()):
+                        raise ValueError("phase cannot be reopened under the current transition policy")
+                    prior = state.get("last_artifact")
+                    if prior and (task_dir / prior).is_file():
+                        source = task_dir / prior
+                        archive = task_dir / f"{source.stem}-before-human-resolution{source.suffix}"
+                        suffix = 2
+                        while archive.exists():
+                            archive = task_dir / f"{source.stem}-before-human-resolution-{suffix}{source.suffix}"
+                            suffix += 1
+                        write_text(archive, source.read_text(encoding="utf-8"))
+                    if previous_state == "succeeded":
+                        state["status"] = "pending"
+                        state.pop("finished_at", None)
+                        route["completed_phases"] = [done for done in route.get("completed_phases", []) if done != phase]
+                        route.setdefault("events", []).append({
+                            "event": "phase-reopened", "phase": phase, "from": "succeeded", "to": "pending",
+                            "at": utc_now(), "reason": "explicit human review resolution",
+                        })
+                route["status"] = "prepared"
+                route.setdefault("events", []).append({
+                    "event": "human-review-resolved", "phase": phase, "at": utc_now(),
+                    "reason": args.resolve_review,
+                })
+                save_route(task_dir / "route.json", route)
+            elif args.resolve_review:
+                print("--resolve-review applies only to a route waiting for human review.", file=sys.stderr)
+                return 2
             workspace = (args.workspace or Path(route.get("workspace") or ".")).expanduser().resolve()
             if not workspace.is_dir():
                 raise ValueError(f"workspace is not available: {workspace}")
@@ -209,7 +250,8 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
     write_json(task_dir / "project-profile.json", profile)
     write_text(task_dir / "agents-draft.md", draft)
     write_json(task_dir / "route.json", {
-        "schema_version": "0.4", "task_id": task_id, "request": "Bootstrap project AGENTS.md",
+        "schema_version": ROUTE_SCHEMA_VERSION, "task_id": task_id, "request": "Bootstrap project AGENTS.md",
+        "mode": "change",
         "workspace": str(workspace), "classification": "standard", "model": "deterministic",
         "status": "needs-approval" if not args.write else "completed", "current_phase": "approval" if not args.write else "verify",
         "phases": ["audit", "approval", "implement", "verify"],
@@ -219,7 +261,7 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
             "implement": {"status": "pending" if not args.write else "succeeded", "attempts": 0, "lanes": {"primary": {"status": "pending"}}},
             "verify": {"status": "pending" if not args.write else "succeeded", "attempts": 0, "lanes": {"primary": {"status": "pending"}}},
         },
-        "routing": {"design": False, "approval": True, "maintainability_review": False}, "limits": {}, "human_gates": ["approval"],
+        "routing": {"design": False, "approval": True, "maintainability_review": False, "quality_control": False}, "limits": {}, "human_gates": ["approval"],
         "events": [{"event": "bootstrap-draft-created", "at": utc_now(), "reason": "derived from repository evidence"}],
         "telemetry": {"calls": 0, "duration_ms": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0}, "created_at": utc_now(),
     })
@@ -273,6 +315,7 @@ def build_parser() -> argparse.ArgumentParser:
     design.add_argument("--without-design", dest="design", action="store_false")
     autopilot.set_defaults(design=None)
     autopilot.add_argument("--approval", action="store_true")
+    autopilot.add_argument("--mode", choices=["auto", "change", "diagnose", "assessment"], default="auto", help="select change, read-only diagnosis, or read-only assessment routing")
     autopilot.add_argument("--execute", action="store_true")
     autopilot.add_argument("--full", action="store_true")
     autopilot.add_argument("--parallel-checks", action="store_true")
@@ -281,6 +324,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="add one focused review lane plus synthesis; costs two model calls",
     )
+    autopilot.add_argument(
+        "--quality-control",
+        action="store_true",
+        help="add the optional evidence-integrity gate after review; costs one model call",
+    )
     autopilot.set_defaults(func=cmd_autopilot)
 
     resume = sub.add_parser("resume", help="recover and continue an existing task")
@@ -288,6 +336,7 @@ def build_parser() -> argparse.ArgumentParser:
     resume.add_argument("--workspace", type=Path)
     resume.add_argument("--model")
     resume.add_argument("--approve")
+    resume.add_argument("--resolve-review", help="record the human resolution and rerun the stopped phase")
     resume.add_argument("--execute", action="store_true")
     resume.add_argument("--full", action="store_true")
     resume.add_argument("--parallel-checks", action="store_true")

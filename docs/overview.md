@@ -34,7 +34,7 @@ Coding models are fast at producing output but can lose requirements, invent con
 - independent evaluator phases;
 - bounded fix loops.
 
-The current implementation is early L3 rather than full L3: it also has structured phase state, resumable routes, artifact metadata checks, and explicit approval records, but not crash-safe concurrency, measured token budgets, or policy-enforced tool permissions.
+The current implementation is early L3 rather than full L3: it also has structured phase state, resumable routes, artifact metadata checks, explicit approval records, atomic route replacement, per-task locking, and interrupted-run recovery. It does not yet have multi-host leases/cancellation, enforced measured budgets, or policy-enforced tool permissions.
 
 ### Future level 4 work
 
@@ -44,7 +44,7 @@ Do not add these merely because they sound advanced. Add them after real task ev
 - parallel worktrees and conflict-aware merging;
 - conformance suites generated from specs;
 - telemetry, measured cost budgets, and adaptive model routing;
-- crash-safe concurrency, locking, and cancellation;
+- multi-host leases, cancellation, and policy-enforced worker boundaries;
 - provider health checks and cancellation.
 
 ## Supported work types
@@ -53,7 +53,8 @@ Do not add these merely because they sound advanced. Add them after real task ev
 | --- | --- | --- |
 | Small local fix | small | avoid over-process; still verify behavior |
 | New feature | standard | define user journeys and failure behavior |
-| Bug diagnosis | audit → test/review | separate reproduction from fix |
+| Bug diagnosis | audit → test → review → verify | read-only reproduction; no automatic implementation |
+| Harness/repository assessment | specify → audit → [design] → plan → review → verify | read-only recommendations; no product test or implementation phase |
 | Refactor | audit → plan → implement → test → review | preserve behavior and compare diff |
 | Security/auth/data change | high-risk | explicit approval and threat review |
 | Documentation-only change | small or standard | source of truth and freshness |
@@ -66,6 +67,10 @@ Do not add these merely because they sound advanced. Add them after real task ev
 - `.agents/0xsdlc/sessions/`: generated task briefs, prompts, reports, and adapter transcripts.
 - `scripts/`: dependency-free orchestration, installation, and validation utilities.
 - `docs/`: design rationale, integrations, and operational guidance.
+
+## Lifecycle boundary
+
+0xSDLC automates bounded engineering work through verified local changes and a human handoff. It does not implicitly publish, merge, deploy, operate, monitor, maintain, or retire a product. Those activities may be planned or assessed, but releases and production actions remain separately authorized and owned by the project's human operators unless an explicit future integration and gate defines otherwise.
 
 ## Core principle
 

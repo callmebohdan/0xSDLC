@@ -13,7 +13,7 @@ The CLI creates `.agents/0xsdlc/sessions/<task-id>/brief.md`, `route.json`, and 
 ## 2. Select the route
 
 - Small: isolated, low-risk, obvious validation path.
-- Standard: feature or multi-file change requiring a spec, plan, tasks, tests, and review.
+- Standard: feature or multi-file change requiring a spec, plan (`plan.md` is the single canonical task breakdown), tests, and review.
 - High-risk: security, data, production, public API, migration, deletion, payment, or external side effect.
 
 When uncertain, choose the safer route. You can edit the route before execution if the decision was wrong, but record why.
@@ -59,5 +59,6 @@ Verification maps every acceptance criterion to current evidence. It ends in `ve
 | Fix a typo | small | diff and relevant docs check |
 | Add CSV export | standard | headers, escaping, permissions, empty data, download behavior |
 | Rotate production credentials | high-risk | approval, secure handling, rollback, post-change validation |
-| Diagnose failing login | standard/high-risk | reproduction first, logs without secrets, regression test |
+| Diagnose failing login without changing code | `--mode diagnose` | reproduction first, logs without secrets, independent review |
+| Assess harness gaps without changing it | `--mode assessment` | repository evidence, prioritized recommendations, no implementation/test phase |
 | Refactor a parser | standard | behavior-preserving fixtures and diff review |
