@@ -13,7 +13,7 @@ The portable wrappers point to the installed canonical library under `%USERPROFI
 | Host | Native user-level skill location |
 | --- | --- |
 | Codex | `%USERPROFILE%\\.codex\\skills` or `$CODEX_HOME/skills` |
-| Claude Code | `%USERPROFILE%\\.claude\\skills` or `$CLAUDE_CONFIG_DIR/skills` |
+| Claude Code | `%USERPROFILE%\\.claude\\skills` or `$CLAUDE_CONFIG_DIR/skills` (installer honors `CLAUDE_CONFIG_DIR`) |
 | Cursor | `%USERPROFILE%\\.cursor\\skills` or `%USERPROFILE%\\.agents\\skills` |
 
 The host owns discovery and invocation syntax. Depending on the host, the same wrapper may be invoked with `$0xsdlc-autopilot`, `/0xsdlc-autopilot`, an automatically selected skill, or an explicit CLI command. The wrapper must not duplicate phase logic or change artifact semantics.

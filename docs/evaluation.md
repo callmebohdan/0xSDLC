@@ -18,9 +18,9 @@
 
 ## Evaluation set
 
-Maintain a small, sanitized set of representative tasks: one local bug, one standard feature, one integration/architecture change, one high-risk change that must stop for approval, one failing-review repair, and one resume after interruption. Each case should state expected route, required artifacts, expected stop point, and a reproducible acceptance check.
+Maintain a small, sanitized set of representative tasks: one local bug, one standard feature, one integration/architecture change, one high-risk change that must stop for approval, one read-only assessment, one diagnosis, one failing-test repair, one failing-review repair, needs-review human resolution, and one resume after interruption. Each case should state expected route, required artifacts, expected stop point, and a reproducible acceptance check.
 
-The dependency-free baseline is encoded in `tests/scenarios/l3-readiness.json` and exercised by `tests/fake_adapter.py`. It covers completion, artifact-declared blocking, approval/resume, adapter crash, malformed output, review/fix/retest/rereview, interrupted execution, adaptive routing, telemetry, and missing-project-instruction bootstrap.
+The dependency-free baseline is encoded in `tests/scenarios/l3-readiness.json` and exercised by `tests/fake_adapter.py`. It covers completion, artifact-declared blocking, read-only modes, approval/resume, adapter crash, malformed output, test/review fix and retest loops, human review resolution, interrupted execution, adaptive routing, optional quality control, telemetry, and missing-project-instruction bootstrap.
 
 Run structural checks first, then the narrowest relevant task checks. A harness change is acceptable only when it preserves or improves the expected route and evidence while not adding unmeasured calls to ordinary tasks.
 
@@ -30,9 +30,10 @@ Run structural checks first, then the narrowest relevant task checks. A harness 
 2. Add design only when a technical decision changes risk, compatibility, or implementation shape.
 3. Add a human gate for high-impact side effects, not for routine local edits.
 4. Use focused maintainability review for architecture/reuse risk only when it can change the decision; it adds two calls.
-5. Use parallel audit/review only when a second general perspective could materially change a decision. Its two independent lanes plus synthesis add four calls; combining both options adds five calls because review lanes share synthesis.
-6. Stop a fix loop when the same stable finding has consumed two attempts or the route has consumed four fixes. Escalate the decision, not the token budget.
-7. Keep static contracts before dynamic task evidence in an adapter prompt where the provider supports prefix caching; measure actual savings rather than assuming them.
+5. Use `--quality-control` only when a separate evidence-integrity gate is valuable; it adds one call and remains absent from ordinary routes.
+6. Use parallel audit/review only when a second general perspective could materially change a decision. Its two independent lanes plus synthesis add four calls; combining both options adds five calls because review lanes share synthesis.
+7. Stop a fix loop when the same stable finding has consumed two attempts or the route has consumed four fixes. Escalate the decision, not the token budget.
+8. Keep static contracts before dynamic task evidence in an adapter prompt where the provider supports prefix caching; measure actual savings rather than assuming them.
 
 ## Failure review
 

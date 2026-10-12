@@ -67,6 +67,70 @@ class EndToEndTests(unittest.TestCase):
         self.assertGreater(route["telemetry"]["input_tokens"], 0)
         self.assertTrue((self.latest_task() / "project-profile.json").is_file())
 
+    def test_assessment_route_never_implements_or_runs_product_tests(self) -> None:
+        result = self.run_cli(
+            "autopilot", "Assess this harness for missing coverage", "--workspace", str(self.workspace),
+            "--execute", "--full",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        task = self.latest_task()
+        route = self.route(task)
+        self.assertEqual(route["mode"], "assessment")
+        self.assertNotIn("implement", route["phases"])
+        self.assertNotIn("test", route["phases"])
+        self.assertEqual(route["status"], "completed")
+        self.assertEqual(route["telemetry"]["calls"], 5)
+
+    def test_diagnosis_route_is_read_only(self) -> None:
+        result = self.run_cli(
+            "autopilot", "Why is the report endpoint broken?", "--workspace", str(self.workspace),
+            "--execute", "--full",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        route = self.route(self.latest_task())
+        self.assertEqual(route["mode"], "diagnose")
+        self.assertNotIn("implement", route["phases"])
+        self.assertEqual(route["telemetry"]["calls"], 4)
+
+    def test_diagnosis_failure_is_recorded_without_auto_fix(self) -> None:
+        result = self.run_cli(
+            "autopilot", "Why is the report endpoint broken?", "--workspace", str(self.workspace),
+            "--execute", "--full", mode="test-failure",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        task = self.latest_task()
+        route = self.route(task)
+        self.assertEqual(route["status"], "needs-review")
+        self.assertNotIn("implement", route["phases"])
+        self.assertFalse((task / "fix-report-1.md").exists())
+
+    def test_failed_test_enters_bounded_fix_test_review_loop(self) -> None:
+        result = self.run_cli(
+            "autopilot", "fix local label", "--kind", "small", "--workspace", str(self.workspace),
+            "--execute", "--full", mode="test-failure",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        task = self.latest_task()
+        route = self.route(task)
+        self.assertEqual(route["status"], "completed")
+        self.assertEqual(route["fix_attempts"], 1)
+        self.assertEqual(route["telemetry"]["calls"], 8)
+        self.assertTrue(any(event["event"] == "repair-loop-started" and event["source_phase"] == "test" for event in route["events"]))
+        for name in ("test-report.md", "fix-report-1.md", "test-report-1.md", "review-1.md"):
+            self.assertTrue((task / name).is_file(), name)
+
+    def test_quality_control_is_opt_in_and_runs_after_review(self) -> None:
+        result = self.run_cli(
+            "autopilot", "fix local label", "--kind", "small", "--workspace", str(self.workspace),
+            "--execute", "--full", "--quality-control",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        task = self.latest_task()
+        route = self.route(task)
+        self.assertIn("quality-control", route["phases"])
+        self.assertEqual(route["telemetry"]["calls"], 7)
+        self.assertTrue((task / "quality-report.md").is_file())
+
     def test_maintainability_review_adds_lane_and_shared_synthesis(self) -> None:
         (self.workspace / "main.cpp").write_text("int main() { return 0; }\n", encoding="utf-8")
         result = self.run_cli(
@@ -119,6 +183,19 @@ class EndToEndTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(self.route(self.latest_task())["status"], "blocked")
 
+    def test_needs_review_artifact_is_not_misreported_as_approval(self) -> None:
+        result = self.run_cli("autopilot", "fix local label", "--kind", "small", "--workspace", str(self.workspace), "--execute", "--full", mode="needs-review")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        route = self.route(self.latest_task())
+        self.assertEqual(route["status"], "needs-review")
+        self.assertEqual(route["phase_states"]["audit"]["status"], "needs-review")
+        self.assertNotEqual(route["status"], "needs-approval")
+        task = self.latest_task()
+        resumed = self.run_cli("resume", task.name, "--execute", "--full", "--resolve-review", "Reviewed the finding", mode="complete")
+        self.assertEqual(resumed.returncode, 0, resumed.stderr)
+        self.assertTrue((task / "audit-before-human-resolution.md").is_file())
+        self.assertEqual(self.route(task)["status"], "completed")
+
     def test_approval_and_resume(self) -> None:
         result = self.run_cli("autopilot", "change authentication", "--kind", "high-risk", "--workspace", str(self.workspace), "--execute", "--full")
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -132,7 +209,9 @@ class EndToEndTests(unittest.TestCase):
         result = self.run_cli("autopilot", "fix local label", "--kind", "small", "--workspace", str(self.workspace), "--execute", "--full", mode="crash")
         self.assertEqual(result.returncode, 17)
         task = self.latest_task()
-        self.assertEqual(self.route(task)["status"], "blocked")
+        route = self.route(task)
+        self.assertEqual(route["status"], "blocked")
+        self.assertEqual(route["phase_states"]["audit"]["status"], "failed")
         self.assertIn("simulated provider process crash", (task / "adapter-audit.stderr.txt").read_text(encoding="utf-8"))
 
     def test_invalid_artifact_is_rejected(self) -> None:
@@ -148,6 +227,25 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual(route["fix_attempts"], 1)
         for name in ("review.md", "fix-report-1.md", "test-report-1.md", "review-1.md"):
             self.assertTrue((task / name).is_file(), name)
+
+    def test_needs_review_requires_human_resolution_and_rechecks_phase(self) -> None:
+        prepared = self.run_cli(
+            "autopilot", "fix local label", "--kind", "small", "--workspace", str(self.workspace),
+            "--execute", "--full", mode="review-needs-review",
+        )
+        self.assertEqual(prepared.returncode, 0, prepared.stderr)
+        task = self.latest_task()
+        rejected = self.run_cli("resume", task.name, "--execute", "--full")
+        self.assertEqual(rejected.returncode, 2)
+        resumed = self.run_cli(
+            "resume", task.name, "--execute", "--full", "--resolve-review", "Reproduced and addressed the concern",
+        )
+        self.assertEqual(resumed.returncode, 0, resumed.stderr)
+        route = self.route(task)
+        self.assertEqual(route["status"], "completed")
+        self.assertTrue((task / "review-before-human-resolution.md").is_file())
+        self.assertTrue(any(event["event"] == "human-review-resolved" for event in route["events"]))
+        self.assertTrue(any(event["event"] == "phase-reopened" for event in route["events"]))
 
     def test_interrupted_phase_recovers_on_resume(self) -> None:
         prepared = self.run_cli("autopilot", "fix local label", "--kind", "small", "--workspace", str(self.workspace))

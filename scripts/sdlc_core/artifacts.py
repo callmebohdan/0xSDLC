@@ -51,4 +51,10 @@ def validate_artifact(path: Path, task_id: str, phase: str) -> dict[str, str]:
         raise ValueError("only verification artifacts may use status: verified")
     if phase == "review" and metadata.get("decision") not in {"approve", "fix", "needs-review"}:
         raise ValueError("review artifact requires decision: approve, fix, or needs-review")
+    if phase == "test" and schema == ARTIFACT_SCHEMA_VERSION:
+        outcome = metadata.get("test_outcome")
+        if outcome not in {"pass", "fail", "needs-review"}:
+            raise ValueError("test artifact requires test_outcome: pass, fail, or needs-review")
+        if outcome == "fail" and not list_value(metadata.get("blocking_findings")):
+            raise ValueError("failed test artifact requires stable blocking_findings IDs")
     return metadata

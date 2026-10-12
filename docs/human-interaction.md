@@ -8,6 +8,7 @@ L3 changes how often the user steers execution, not who owns consequential decis
 | --- | --- | --- |
 | Prepare | packet and route are created; no provider executes | inspect scope and cost before starting |
 | Standard autopilot | phases continue until completion, failure, or gate | ordinary local engineering work |
+| Read-only assessment/diagnosis | audit or assessment phases continue without source edits | investigate a symptom or evaluate a repository without implementation authority |
 | Gated autopilot | planning completes, then implementation waits | sensitive, expensive, irreversible, or ambiguous work |
 | Manual phase | user invokes one named agent | focused design, plan, review, fix, or verification |
 | Maintainability review | normal review plus a focused engineering-quality lane and synthesis | architecture, reusable libraries, public interfaces, concurrency, or performance risk |
@@ -18,11 +19,14 @@ L3 changes how often the user steers execution, not who owns consequential decis
 - A configured or dynamically inserted approval gate is reached.
 - Work needs dependencies, public API changes, migration, CI/release changes, secrets, production access, destructive operations, or external side effects.
 - A fix budget is exhausted, review evidence is ambiguous, or a required environment is unavailable.
+- A route reaches `needs-review`; the human must resolve it explicitly before the stopped phase is rerun. This is distinct from `needs-approval`, which gates a planned high-impact change.
 - Residual security, privacy, reliability, performance, or data-loss risk needs acceptance.
 
 At a gate, show proposed scope, reason, risks, changes, validation plan, rollback, and estimated extra calls. Approval is explicit and durable. Resume records it in `approval.md` and `route.json`; silence is not approval.
 
 The maintainability lane is opt-in with `--maintainability-review` and adds two model calls. It does not add a human gate unless its synthesized findings require a fix or unresolved design decision.
+
+The evidence-integrity `quality-control` phase is opt-in with `--quality-control` and adds one model call after review. It is useful for release/compliance/high-assurance evidence, but it does not authorize merge, release, deployment, or production operation.
 
 ## Background behavior
 

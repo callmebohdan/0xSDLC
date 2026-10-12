@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 HARNESS_ROOT = Path(__file__).resolve().parents[2]
-ROUTE_SCHEMA_VERSION = "0.4"
+ROUTE_SCHEMA_VERSION = "0.5"
 ARTIFACT_SCHEMA_VERSION = "0.2"
 MAX_FIX_ATTEMPTS_PER_FINDING = 2
 MAX_TOTAL_FIX_ATTEMPTS = 4
@@ -21,6 +21,7 @@ PHASE_CONTRACTS = {
     "implement": "0xSDLC-implement/implementation.md",
     "test": "support/agents/0xSDLC-test/testing.md",
     "review": "support/agents/0xSDLC-review/review.md",
+    "quality-control": "support/agents/0xSDLC-quality/quality-assurance.md",
     "verify": "0xSDLC-verify/verification.md",
     "fix": "0xSDLC-fix/fix.md",
     "synthesis": "support/conventions/parallel-synthesis.md",
@@ -29,12 +30,14 @@ PHASE_ARTIFACTS = {
     "specify": "spec.md", "audit": "audit.md", "design": "design.md",
     "plan": "plan.md", "implement": "implementation.md", "test": "test-report.md",
     "review": "review.md", "verify": "verification.md", "fix": "fix-report.md",
+    "quality-control": "quality-report.md",
     "synthesis": "synthesis.md",
 }
 PHASE_AGENTS = {
     "specify": "specifier", "audit": "auditor", "design": "architect",
     "plan": "task-planner", "implement": "implementer", "test": "tester",
     "review": "reviewer", "verify": "verifier", "fix": "fixer",
+    "quality-control": "quality-control",
     "synthesis": "evidence-synthesizer",
 }
 BASE_PHASES = {
@@ -44,11 +47,12 @@ BASE_PHASES = {
 }
 ALLOWED_TRANSITIONS = {
     "pending": {"running", "needs-approval", "skipped"},
-    "running": {"succeeded", "failed", "blocked", "needs-approval"},
-    "succeeded": {"running"},
+    "running": {"succeeded", "failed", "blocked", "needs-approval", "needs-review"},
+    "succeeded": {"running", "pending"},
     "failed": {"running", "blocked"},
     "blocked": {"running"},
     "needs-approval": {"running", "succeeded"},
+    "needs-review": {"running"},
     "skipped": set(),
 }
 

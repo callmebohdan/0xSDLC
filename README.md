@@ -38,6 +38,8 @@ Use 0xSDLC when a task benefits from traceability, independent checking, or a co
 | --- | --- | --- |
 | Typo, isolated test, or obvious local correction | `audit → plan → implement → test → review → verify` | Keeps process proportional to risk |
 | Feature, bug fix, refactor, or multi-file change | `specify → audit → design → plan → implement → test → review → verify` | Defines behavior before implementation |
+| Investigate a symptom without changing code | `audit → test → review → verify` (`--mode diagnose`) | Preserves a read-only boundary |
+| Assess a repository or proposal | `specify → audit → [design] → plan → review → verify` (`--mode assessment`) | Produces recommendations without implementation or product tests |
 | Security, authentication, secrets, migration, deletion, production, payment, privacy, or public API work | Standard route plus `approval` before implementation | Makes blast radius and human authorization explicit |
 
 Do not use the harness to disguise an unclear product decision. If two interpretations could lead to materially different behavior, the specification or human gate should stop and expose that decision.
@@ -58,7 +60,7 @@ Each agent has one responsibility:
 - `fix`: resolve one review finding with evidence;
 - `verify`: map every acceptance criterion to final proof.
 
-Intake is intentionally folded into the generated brief and specification. Quality assurance remains an optional release, compliance, or regulated-work gate rather than a default phase.
+Intake is intentionally folded into the generated brief and specification. Quality control is an executable but opt-in evidence-integrity gate (`--quality-control`) for release, compliance, regulated, or other high-assurance work; it is not a default phase.
 
 ### Durable handoffs
 
@@ -79,9 +81,15 @@ Autopilot selects a risk-based route, invokes configured model adapters, records
 
 Review findings can trigger `fix → test → review`, but recovery is bounded: each stable finding receives at most two attempts and a cycle receives at most four total attempts.
 
+In change mode, a test report with `test_outcome: fail` and stable finding IDs enters the same bounded repair loop. Diagnosis and assessment routes never invoke implementation or automatic repair. `needs-approval` is reserved for an explicit approval gate; `needs-review` pauses for human judgment and requires an explicit resolution before the affected phase is rerun.
+
 ### Model neutrality
 
 The core contracts do not depend on a vendor SDK. Codex, Claude, Cursor, Qwen, Llama, and future providers can use the same phase semantics and artifact schemas through provider-specific integration wrappers.
+
+## Lifecycle boundary
+
+0xSDLC takes engineering work through local verification and a human handoff. It does not implicitly merge, release, deploy, operate, monitor, maintain, or retire a product. Production and release actions require separate explicit authorization and project-owned procedures.
 
 ## AI maturity
 
@@ -89,7 +97,7 @@ The core contracts do not depend on a vendor SDK. Codex, Claude, Cursor, Qwen, L
 
 It already provides repeatable workflows, phase boundaries, structured artifacts, risk-based routing, approval gates, resumable routes, evidence checks, bounded recovery, and optional independent audit/review lanes.
 
-It is not yet a full L3/L4 platform. The runner already has versioned route and artifact schemas, atomic task locking, interrupted-run recovery, dynamic route events, cost/call telemetry, provider capability profiles, project bootstrap, and explicit synthesis of parallel evidence. The remaining path to L3 is operational proof: cross-provider conformance, representative evaluations, measured quality/cost thresholds, provider health and cancellation, and policy-enforced tool permissions.
+It is not yet a full L3/L4 platform. The runner already has versioned route and artifact schemas, atomic route writes, per-task locking, interrupted-run recovery, dynamic route events, cost/call telemetry, provider capability profiles, project bootstrap, and explicit synthesis of parallel evidence. The remaining path to L3 is operational proof: cross-provider conformance, representative evaluations, measured quality/cost thresholds, provider health/cancellation, and policy-enforced tool permissions.
 
 ## Repository layout
 

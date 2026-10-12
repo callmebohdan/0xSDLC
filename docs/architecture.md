@@ -13,8 +13,10 @@ focused phase prompt
     ↓
 model adapter → subagent → source change or phase artifact
     ↓                              ↑
-test → review → fix → test → review → verify ┘
+test/review finding → fix → test → review → verify ┘
 ```
+
+Task intent can select a read-only diagnosis (`audit → test → review → verify`) or assessment (`specify → audit → [design] → plan → review → verify`) route. These omit implementation. `quality-control` is an optional post-review phase and does not enter ordinary routes.
 
 ## Responsibilities
 
@@ -24,7 +26,7 @@ Owns task identity, artifact locations, route choice, phase order, current statu
 
 ### Subagent contract
 
-Owns one bounded transformation: specify, audit, design, plan, implement, test, review, verify, or fix. Quality assurance remains an optional release/compliance gate, not a default phase. Design is conditional, not a mandatory ceremony. A focused maintainability reviewer is an optional review lane, not another route phase. Each agent reads listed inputs, follows shared guardrails, and writes the named output artifact.
+Owns one bounded transformation: specify, audit, design, plan, implement, test, review, quality-control, verify, or fix. Quality control is an executable but opt-in evidence gate after review, not a default phase. Design is conditional, not a mandatory ceremony. A focused maintainability reviewer is an optional review lane, not another route phase. Each agent reads listed inputs, follows shared guardrails, and writes the named output artifact.
 
 ### Adapter
 
@@ -61,11 +63,15 @@ Never substitute a global contract for project-specific instructions. Project ru
 pending → running → succeeded → next phase
                  ↘ blocked
                  ↘ needs-approval
+                 ↘ needs-review
 
-review(fix) → fix → test → review
-review(needs-review) → human decision
+test(fail with stable IDs) ─┐
+review(fix with stable IDs) ─┴→ fix → test → review
+needs-review → explicit human resolution → rerun stopped phase
 verification → completed | needs-review | blocked
 ```
+
+`needs-approval` marks the explicit pre-implementation gate. `needs-review` marks a human decision/resolution; it is never treated as approval. A failed test enters the repair loop only on a change route. Assessment and diagnosis preserve failure evidence without automatically editing source.
 
 State changes must be reflected atomically in `route.json` and supported by a valid artifact. A model response without a durable artifact is not a completed phase. Parallel audit/review or maintainability lanes add a distinct synthesis artifact before their conclusions influence routing.
 

@@ -7,18 +7,20 @@ Autopilot is a bounded decision loop. It chooses a minimum safe route, creates d
 From the repository root, prepare a task without invoking a model:
 
 ```text
-python scripts/0xSDLC-autopilot.py "Add CSV export to the reports page"
+python scripts/0xSDLC.py autopilot "Add CSV export to the reports page"
 ```
 
 After reviewing the generated brief and route, run the complete route through the selected adapter:
 
 ```text
-python scripts/0xSDLC-autopilot.py "Add CSV export to the reports page" --model codex --execute --full
+python scripts/0xSDLC.py autopilot "Add CSV export to the reports page" --model codex --execute --full
 ```
 
 `--full` is deliberately opt-in and requires `--execute`. The runner stops at approval gates, adapter failures, or missing required phase artifacts. The detailed agent contract is [`0xSDLC-autopilot/autopilot.md`](../../0xSDLC-autopilot/autopilot.md).
 
 For architecture-heavy or reusable code, add `--maintainability-review`. It runs one focused review beside the normal review and synthesizes both before routing, adding two model calls. Use deterministic project formatters and analyzers for mechanical style instead.
+
+For an evidence-integrity gate on release, compliance, regulated, or otherwise high-assurance work, add `--quality-control`; it runs after review and adds one model call. It is opt-in and does not increase the default route cost.
 
 ## Inputs
 
@@ -27,7 +29,7 @@ For architecture-heavy or reusable code, add `--maintainability-review`. It runs
 - Available local commands and provider adapters.
 - Optional user-supplied constraints such as stack, deadline, compatibility, or approval policy.
 
-If the request is only a symptom (“it is broken”), autopilot may audit and diagnose, but must not invent a desired behavior. If the request is dangerously broad (“rewrite everything”), classify it as high-risk or ask for a bounded outcome.
+If the request is only a symptom (“it is broken”), use `--mode diagnose` or allow the clear diagnosis wording to select it. This route investigates and tests but cannot implement or automatically repair. For harness/repository assessment without a change request, use `--mode assessment`; it can specify, audit, optionally design, plan recommendations, review, and verify the assessment without implementation or product tests. Use `--mode change` for authorized code changes. If intent is ambiguous, ask before choosing a write-capable route. If the request is dangerously broad (“rewrite everything”), classify it as high-risk or ask for a bounded outcome.
 
 ## Route selection
 
@@ -55,6 +57,14 @@ Use when the task involves security, authentication, secrets, production, deploy
 
 The approval phase must name the exact action, blast radius, rollback plan, and evidence required. “User asked for it” is not a substitute for an explicit approval record when the requested action is high-impact.
 
+### Read-only routes
+
+Diagnosis: `audit → test → review → verify`.
+
+Assessment: `specify → audit → [design] → plan → review → verify`.
+
+Both routes omit `implement`. A failed test in diagnosis is evidence to report, not permission to edit. Select intent explicitly with `--mode diagnose` or `--mode assessment` when inference is uncertain.
+
 ## Decision algorithm
 
 1. Create a unique task folder under `.agents/0xsdlc/sessions/<task-id>/`.
@@ -65,8 +75,8 @@ The approval phase must name the exact action, blast radius, rollback plan, and 
 6. Generate a prompt packet containing only the active contract, required artifacts, relevant project instructions, and the route.
 7. Run one phase at a time. Persist its output before starting the next phase.
 8. On `blocked` or `needs-review`, stop. Do not automatically skip the phase.
-9. On a failed test or review finding, create a bounded fix loop. Reproduce the finding before changing code.
-10. If review returns `fix`, require stable finding IDs, then run `fix → test → review` and preserve every numbered report. Stop after two attempts per finding or four total fixes. End with `verification.md` and a final status of `verified`, `needs-review`, or `blocked`.
+9. In change mode, a test report must set `test_outcome: pass | fail | needs-review`. A `fail` with stable `blocking_findings` IDs enters the bounded repair loop; missing IDs or `needs-review` stops for a person. Read-only routes record the failure without invoking a fixer.
+10. If review returns `fix`, require stable finding IDs, then run `fix → test → review` and preserve every numbered report. Stop after two attempts per finding or four total fixes. A stopped `needs-review` route requires an explicit `resume --resolve-review "..."`; approval gates instead require `--approve`. End with `verification.md` and a final status of `verified`, `needs-review`, or `blocked`.
 
 ## Retry and loop limits
 

@@ -50,7 +50,9 @@ def default_codex_skills() -> Path:
 
 
 def default_claude_skills() -> Path:
-    return Path.home() / ".claude" / "skills"
+    config_dir = os.environ.get("CLAUDE_CONFIG_DIR")
+    base = Path(config_dir).expanduser() if config_dir else Path.home() / ".claude"
+    return base / "skills"
 
 
 def default_cursor_skills() -> Path:
