@@ -1,4 +1,4 @@
 interface:
   display_name: "0xSDLC Bootstrap"
-  short_description: "Draft project AGENTS.md instructions"
-  default_prompt: "Use $0xsdlc-bootstrap to derive a reviewable AGENTS.md draft from this repository."
+  short_description: "Assess project readiness and draft AGENTS.md guidance"
+  default_prompt: "Use $0xsdlc-bootstrap to assess build, test, and CI readiness and prepare a reviewable AGENTS.md draft when guidance is missing or inadequate."

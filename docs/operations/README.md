@@ -22,6 +22,16 @@ Do not load every phase into every prompt. The active phase owns the current act
 python scripts\0xSDLC.py autopilot "Describe one bounded task"
 ```
 
+## Initializing a repository
+
+Run a quick readiness check before using 0xSDLC in a repository:
+
+```powershell
+python scripts\0xSDLC.py init --check --workspace .
+```
+
+To save the evidence profile and readiness report under `.agents/0xSDLC/sessions/`, run `init` without `--check`. When root `AGENTS.md` is missing or has detected gaps, 0xSDLC prepares an `agents-draft.md` in that session and prints the adoption command. Review the draft first; adoption requires `--approve`. Existing instructions are preserved in proposed updates, and adoption stops if the source file changed after assessment. `bootstrap` remains an alias for `init`.
+
 Inspect the generated route and first prompt under `<repository>\\.agents\\0xSDLC\\sessions\\<task-id>\\`. Use `--execute` only after the adapter and permissions are understood.
 
 Use `--parallel-checks` only with `--full` when independent audit and review lanes add meaningful confidence. It doubles those model calls and is disabled by default.

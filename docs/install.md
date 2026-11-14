@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Python 3.10 or newer. Python 3.14 is supported.
-- A repository to inspect. A root `AGENTS.md` is preferred; when absent, project bootstrap creates reviewable task-local context before any permanent instructions are adopted.
+- A repository to inspect. `init` checks whether root `AGENTS.md` is missing or lacks guidance reflected in repository build, test, CI, and style evidence; it prepares a task-local draft for review before adoption.
 - An installed provider CLI only if `--execute` will be used.
 
 On Windows, use a fresh terminal after changing PATH. If PATH is not refreshed, call the interpreter directly, for example:
@@ -31,6 +31,14 @@ python scripts\install.py --agents-dir C:\path\to\.agents\0xsdlc
 Set `0XSDLC_AGENTS_HOME` to make the orchestrator use another published copy. The repository's root-level contract folders remain the source fallback.
 
 ## Dry-run first
+
+Initialize a repository and inspect its build, test, CI, and `AGENTS.md` readiness before the first task:
+
+```text
+python scripts\0xSDLC.py init --workspace C:\path\to\repo
+```
+
+Use `--check` for a console-only report. If the instructions need work, review the session's `readiness.md` and `agents-draft.md`, then adopt the reviewed draft with the printed `init --adopt ... --approve ...` command.
 
 ```text
 python scripts\0xSDLC.py autopilot "Add CSV export to reports"
