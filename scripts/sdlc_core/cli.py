@@ -21,7 +21,7 @@ from .config import (
     sessions_root,
 )
 from .native import close_phase, interrupt_phase, open_phase
-from .project import agents_draft, project_profile
+from .project import agents_draft, current_git_branch, project_profile
 from .prompts import prompt_for
 from .providers import select_model, validate_profiles
 from .routing import classify, infer_mode, migrate_route, needs_design, route_payload
@@ -74,6 +74,7 @@ def create_task(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], s
         mode,
         args.quality_control,
     )
+    route["git_branch"] = current_git_branch(workspace)
     if args.native:
         route["execution"] = "native"
     if args.parallel_checks:
@@ -314,7 +315,8 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
     write_json(task_dir / "route.json", {
         "schema_version": ROUTE_SCHEMA_VERSION, "task_id": task_id, "request": "Bootstrap project AGENTS.md",
         "mode": "change",
-        "workspace": str(workspace), "classification": "standard", "model": "deterministic",
+        "workspace": str(workspace), "git_branch": current_git_branch(workspace),
+        "classification": "standard", "model": "deterministic",
         "status": "needs-approval" if not args.write else "completed", "current_phase": "approval" if not args.write else "verify",
         "phases": ["audit", "approval", "implement", "verify"],
         "phase_states": {

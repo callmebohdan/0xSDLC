@@ -8,4 +8,6 @@ Migration to `0.5` supplies `mode: "change"` and `routing.quality_control: false
 
 Optional attempt history, nullable usage totals, and per-metric coverage extend `0.5` without requiring a format change for existing routes. On resume, the runner retains legacy aggregates under `legacy_telemetry` and rebuilds covered totals from call journals. See [Sessions and output](../docs/session-output.md) for the call record layout.
 
+The optional `git_branch` route field records the branch at task creation independently of the task ID. It is `null` outside a named Git branch; older routes without the field remain valid.
+
 Schema changes must include migration behavior, regression tests, and release notes. Never rewrite old task artifacts solely to make them appear current.

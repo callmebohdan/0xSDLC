@@ -9,6 +9,7 @@
     "task_id": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}_[a-z0-9-]+_[a-f0-9]{8}$"},
     "request": {"type": "string", "minLength": 1},
     "workspace": {"type": "string", "minLength": 1},
+    "git_branch": {"$ref": "#/$defs/nullableString"},
     "classification": {"enum": ["small", "standard", "high-risk"]},
     "mode": {"enum": ["change", "diagnose", "assessment"]},
     "model": {"type": "string", "minLength": 1},

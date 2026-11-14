@@ -22,6 +22,8 @@ Pass the same override to `autopilot`, `resume`, `status`, `bootstrap`, or `nati
 
 Keep one task's evidence together. Never overwrite a failed report to make the task appear green. Redact secrets and private data from artifacts before sharing them. The eight-character suffix prevents collisions while keeping paths readable.
 
+Task IDs use `YYYY-MM-DD_<task-slug>_<8-hex-id>` and do not encode the branch. `route.json` stores the originating branch in the optional `git_branch` field; it is `null` when no named Git branch is available.
+
 The runner uses an OS lock on the persistent `.0xsdlc.guard` file. It releases when the owning process exits. On upgrade, finish any run started by the previous runtime before reopening its session. `resume --stale-lock-seconds` sets the minimum age for recovery of a legacy `.0xsdlc.lock` whose local owner has exited.
 
 ## Native chat

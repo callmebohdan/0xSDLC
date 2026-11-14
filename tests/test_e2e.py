@@ -122,6 +122,7 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         task = self.latest_task()
         self.assertEqual(task.parent, self.workspace / ".agents" / "0xSDLC" / "sessions")
+        self.assertIsNone(self.route(task)["git_branch"])
         self.assertIn(task.name, self.run_cli("status").stdout)
 
         legacy_root = Path(self.env["0XSDLC_AGENTS_HOME"]) / "sessions"
@@ -132,6 +133,21 @@ class EndToEndTests(unittest.TestCase):
         result = self.run_cli("resume", task.name)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn(str(legacy_task).casefold(), result.stdout.casefold())
+
+    def test_branch_is_recorded_separately_from_task_id(self) -> None:
+        subprocess.run(
+            ["git", "init", "--quiet", "-b", "feature/session-metadata", str(self.workspace)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        result = self.run_cli("autopilot", "fix branch metadata", "--model", "generic")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        task = self.latest_task()
+        route = self.route(task)
+        self.assertEqual(route["git_branch"], "feature/session-metadata")
+        self.assertRegex(task.name, r"^\d{4}-\d{2}-\d{2}_fix-branch-metadata_[a-f0-9]{8}$")
+        self.assertNotIn("feature", task.name)
 
     def test_nested_workspace_uses_repository_root_for_sessions(self) -> None:
         nested = self.workspace / "packages" / "app"
