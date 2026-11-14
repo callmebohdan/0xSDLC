@@ -33,6 +33,16 @@ route_reason: ""
 | Data/schema | | | |
 | Docs/generated | | | |
 
+## Environment capabilities relevant to acceptance criteria
+
+| Capability | Required by criterion? | Availability | Probe/command | Exact error or limitation |
+| --- | --- | --- | --- | --- |
+| Build/test executables | | | | |
+| Writable temporary directory | | | | |
+| Browser/screenshot access | | | | |
+
+Use `available`, `unavailable`, `invalid`, `not-probed`, or `not-required`. Init only checks whether configured command executables are on `PATH`; it does not run project commands or probe provider-hosted browser tools. Do not infer screenshot access from an installed browser binary.
+
 ## Existing behavior and extension points
 
 - Current behavior:
