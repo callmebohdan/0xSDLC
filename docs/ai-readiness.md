@@ -17,9 +17,13 @@
 | Cost control | minimal default route, opt-in parallel lanes/quality gate, call counts and optional token/cost sidecars | enforced token/call budgets and cancellation |
 | Safety | human gates and evidence rules | policy-enforced tool permissions |
 
-## Real-task evidence so far
+## Evaluation evidence so far
 
-The available local record contains two completed verification-only sessions from 2026-11-10. Both reports ended `verified`, but both evaluated 0xSDLC mechanics rather than representative application changes.
+The available evidence has two different strengths: captured runner artifacts for verification-only sessions, and retrospective outcome evidence from real AWEAR work in other chats. The latter is useful for quality and workflow conclusions even when exact phase timing is unavailable.
+
+### Captured runner evidence
+
+Two completed verification-only sessions from 2026-11-10 both ended `verified`. They evaluated 0xSDLC mechanics rather than representative application changes.
 
 | Evidence | Session A | Session B |
 | --- | --- | --- |
@@ -30,15 +34,31 @@ The available local record contains two completed verification-only sessions fro
 
 Both route summaries recorded `calls: 0`, with no provider, token, or cost measurements. Those values mean the native sessions did not capture adapter-call telemetry; they do **not** establish zero model usage or cost. The phase durations are not a performance comparison: task scope differed and native wall time includes interactive work. A separate prepared-only task has no completed phases and is excluded.
 
-This evidence supports the verification and artifact checks exercised by those sessions. It does not establish end-to-end task quality, ordinary-route efficiency, real-provider health, budget behavior, repeated finding behavior, or cross-provider equivalence. The sample is too small and narrow to rank those feature gaps.
+### Retrospective real-task outcomes
+
+Other chats provide outcome evidence from AWEAR implementation work:
+
+| Work stream | Observed outcome | Limitation |
+| --- | --- | --- |
+| PoC implementation | Typecheck, production build, four fit tests, HTTP flow, and persistence/restart checks passed after switching from Turbopack to Webpack when Windows junction permissions caused EPERM. | The workaround was environment-specific; complete phase-level AI timing and cost are unavailable. |
+| Scanner parity | 18/18 tests, typecheck, and code review passed. Build hit EPERM and browser access was blocked, so the session correctly remained `needs-review`; visual verification was not completed. | We cannot attribute the environment failures to 0xSDLC itself or measure time spent resolving them. |
+| Wardrobe/purchase parity | 23 tests, typecheck, production build, and diff check passed. | Calendar validation remained open; no screenshots were captured, so visual parity was not claimed. |
+
+These records show useful functional progress and that incomplete visual/environment checks were not reported as verified. They also show repeated Windows EPERM friction and missing visual evidence. Most phase boundaries and durations, provider inference time, token usage, and cost were not recorded; later UI refinement also happened outside separate Autopilot tasks. Treat these as retrospective outcomes, not captured runner metrics. A planned profile/color-test handover has no implementation result and is excluded.
+
+Together, the evidence supports these conclusions:
+
+- Outcome data from other chats is valid for evaluating acceptance results, test/build results, review disposition, human follow-up, and environment blockers.
+- Phase timings are useful for locating time sinks and comparing route changes, but are not required to evaluate correctness or workflow quality.
+- The current data is still insufficient to compare provider health, cancellation, budget behavior, repeated-finding handling, criterion quality, or cross-provider equivalence.
 
 ## Prioritized L3 backlog
 
-### Priority 1 — Collect a representative real-task baseline
+### Priority 1 — Close the outcome and evidence baseline
 
-This is the only next priority supported by current evidence. Use the next five completed real-task sessions across the work you already do: include a bug fix, a small feature, and a diagnosis/read-only task when available. Include repair or resume cases if they naturally occur; do not manufacture risky tasks to fill the set.
+The other-chat evidence broadens the baseline beyond two phase timings. Keep adding naturally occurring real-task sessions until there are at least five distinct outcomes, counting incomplete and environment-blocked work. Include a bug fix, a small feature, and a diagnosis/read-only task when available; include repair or resume cases if they naturally occur. Do not manufacture risky tasks to fill the set. The repeated EPERM/browser-verification friction is the clearest observed workflow issue to track, but it is not yet enough to justify a broad environment-specific feature.
 
-For each session, record task class and repository, execution mode/provider, expected outcome and acceptance result, phases and human interventions, phase wall time and attempts, actionable review findings and whether they repeated, and call/token/cost data with its coverage when available. Keep unavailable measurements as unknown, never as zero. Include failed and abandoned attempts so the baseline does not contain only successful runs.
+For each session, record task class and repository, execution mode/provider when known, expected outcome and acceptance result, test/build/review results, blocked or unavailable checks, human interventions, and repeated findings. Record phases, wall time, attempts, and call/token/cost data when captured; otherwise mark them unknown and label the record retrospective. Never infer precise timings from chat ordering or treat missing usage as zero. Include failed, incomplete, and abandoned attempts so the baseline does not contain only successful runs.
 
 ### Priority 2 — Select one feature from observed failure signals
 
