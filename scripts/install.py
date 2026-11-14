@@ -132,8 +132,14 @@ def stage_copy(source: Path, destination: Path, root: Path, stage_roots: list[Pa
     operations.append({"root": root, "destination": destination, "staged": staged, "backup": stage_root / "backup"})
 
 
+class RollbackError(OSError):
+    """An install rollback failed; staging directories contain recovery data."""
+
+
 def apply_staged(operations: list[dict[str, Path]], stage_roots: list[Path]) -> None:
     committed: list[dict[str, Path | bool]] = []
+    rollback_errors: list[str] = []
+    preserve_stage_roots = False
     try:
         for operation in operations:
             destination = operation["destination"]
@@ -145,19 +151,36 @@ def apply_staged(operations: list[dict[str, Path]], stage_roots: list[Path]) -> 
                 os.replace(operation["staged"], destination)
             except OSError:
                 if had_destination:
-                    os.replace(backup, destination)
+                    try:
+                        os.replace(backup, destination)
+                    except OSError as exc:
+                        rollback_errors.append(f"could not restore {destination} from {backup}: {exc}")
                 raise
             committed.append({**operation, "had_destination": had_destination})
     except OSError:
         for operation in reversed(committed):
             destination = operation["destination"]
-            remove_published_path(destination, operation["root"])
+            try:
+                remove_published_path(destination, operation["root"])
+            except OSError as exc:
+                rollback_errors.append(f"could not remove partially published {destination}: {exc}")
             if operation["had_destination"]:
-                os.replace(operation["backup"], destination)
+                try:
+                    os.replace(operation["backup"], destination)
+                except OSError as exc:
+                    rollback_errors.append(f"could not restore {destination} from {operation['backup']}: {exc}")
+        if rollback_errors:
+            preserve_stage_roots = True
+            preserved = ", ".join(str(path) for path in stage_roots)
+            details = "; ".join(rollback_errors)
+            raise RollbackError(
+                f"install failed and rollback was incomplete ({details}); recovery backups were preserved in: {preserved}"
+            )
         raise
     finally:
-        for stage_root in stage_roots:
-            shutil.rmtree(stage_root, ignore_errors=True)
+        if not preserve_stage_roots:
+            for stage_root in stage_roots:
+                shutil.rmtree(stage_root, ignore_errors=True)
 
 
 def main() -> int:
@@ -225,8 +248,9 @@ def main() -> int:
                             shutil.copytree(metadata, operations[-1]["staged"] / "agents", dirs_exist_ok=True)
         apply_staged(operations, stage_roots)
     except (FileExistsError, FileNotFoundError, OSError, ValueError) as exc:
-        for stage_root in stage_roots:
-            shutil.rmtree(stage_root, ignore_errors=True)
+        if not isinstance(exc, RollbackError):
+            for stage_root in stage_roots:
+                shutil.rmtree(stage_root, ignore_errors=True)
         print(f"Install stopped: {exc}", file=sys.stderr)
         return 2
     print(f"Installed 0xSDLC into {target}")
