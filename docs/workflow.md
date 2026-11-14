@@ -8,7 +8,7 @@ Run:
 python scripts\0xSDLC.py autopilot "Add CSV export to the reports page"
 ```
 
-The CLI creates `.agents/0xsdlc/sessions/<task-id>/brief.md`, `route.json`, and the first prompt packet. Inspect them before execution. The request is preserved verbatim; the route is a decision record, not hidden behavior.
+The CLI creates `brief.md`, `route.json`, and the first prompt packet under the resolved [session root](session-output.md). Inspect them before execution. The brief preserves the request verbatim and the route records the routing decision.
 
 ## 2. Select the route
 

@@ -18,6 +18,8 @@ python scripts/0xSDLC.py autopilot "Add CSV export to the reports page" --model 
 
 `--full` is deliberately opt-in and requires `--execute`. The runner stops at approval gates, adapter failures, or missing required phase artifacts. The detailed agent contract is [`0xSDLC-autopilot/autopilot.md`](../../0xSDLC-autopilot/autopilot.md).
 
+For native chat, use `autopilot --native` and the recorder in [Sessions and output](../session-output.md). The recorder runs locally without a model adapter.
+
 For architecture-heavy or reusable code, add `--maintainability-review`. It runs one focused review beside the normal review and synthesizes both before routing, adding two model calls. Use deterministic project formatters and analyzers for mechanical style instead.
 
 For an evidence-integrity gate on release, compliance, regulated, or otherwise high-assurance work, add `--quality-control`; it runs after review and adds one model call. It is opt-in and does not increase the default route cost.
@@ -67,7 +69,7 @@ Both routes omit `implement`. A failed test in diagnosis is evidence to report, 
 
 ## Decision algorithm
 
-1. Create a unique task folder under `.agents/0xsdlc/sessions/<task-id>/`.
+1. Create a unique task folder under the resolved [session root](../session-output.md).
 2. Preserve the user's request verbatim in `brief.md`; do not silently reinterpret it.
 3. Identify actors, outcome, affected assets, data sensitivity, external side effects, and reversibility.
 4. Classify risk using the route rules above. If uncertain, choose the safer route.

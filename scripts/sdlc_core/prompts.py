@@ -70,6 +70,10 @@ def prompt_for(
     if not contract.is_file():
         contract = library_path("support/adapters/generic.md")
     route = json.loads((task_dir / "route.json").read_text(encoding="utf-8"))
+    for state in route["phase_states"].values():
+        state.pop("attempt_history", None)
+    for field in ("telemetry", "legacy_telemetry"):
+        route.pop(field, None)
     mode_guard = ""
     if route.get("mode") in {"diagnose", "assessment"}:
         mode_guard = (
@@ -101,6 +105,7 @@ Workspace: `{workspace}`
 ## Outcome and evidence rule
 
 Perform only this phase. Write `{output_artifact or PHASE_ARTIFACTS.get(phase, f'{phase}.md')}` in `{task_dir}` with valid front matter. Report only evidence obtained. Stop for missing proof or approval. Do not fill gaps with plausible reasoning.
+Use the route's `last_artifact` and `last_synthesis_artifact` paths for completed phases when older reports also exist.
 
 ## Route
 

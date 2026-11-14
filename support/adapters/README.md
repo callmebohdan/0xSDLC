@@ -16,6 +16,8 @@ Future Qwen, Llama, or other providers should add a small adapter contract and c
 
 Machine-readable profiles under `profiles/` declare command configuration, skill discovery locations, read-only controls, parallel execution, and optional usage sidecars. The runner validates the declaration before selecting a provider. A profile documents capability; it does not prove that a CLI is installed, authenticated, or interactively discoverable.
 
+See the [adapter command and usage contract](../../docs/adapters.md) for placeholders and the call ID required in each sidecar.
+
 Provider conformance has two levels:
 
 1. Structural: profile schema, required capabilities, portable prompt/artifact contract, and wrapper placement tests.

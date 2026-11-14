@@ -22,7 +22,7 @@ Fold intake into `specify`: the brief is captured deterministically and the spec
 
 ## Task state
 
-1. Create exactly one directory under `%USERPROFILE%\.agents\0xsdlc\sessions\YYYY-MM-DD_short-description_8hex`.
+1. Resolve the session root through `--sessions-root`, `0XSDLC_SESSIONS_ROOT`, then the existing user-level default. Keep a repository-local root Git-ignored. The runner checks create and atomic replace before execution. See [session output](../docs/session-output.md).
 2. Persist the verbatim request in `brief.md` and route, rationale, phase state, approvals, attempts, and events in `route.json` before any adapter call.
 3. Each phase writes the requested Markdown artifact with `task_id`, `phase`, and controlled `status` front matter. A missing or invalid artifact blocks the route.
 4. State transitions are recorded atomically. Phase states are `pending`, `running`, `succeeded`, `failed`, `blocked`, `needs-approval`, `needs-review`, and `skipped`.
@@ -33,7 +33,7 @@ Route schema `0.5` and artifact schema `0.2` are current. Existing route `0.2`â€
 ## Execution and stop rules
 
 - Load current phase contract, brief, route, project `AGENTS.md`, listed artifacts, and only relevant source. Do not paste the whole library or conversation into every prompt.
-- Run one phase at a time and preserve adapter stdout/stderr. Record commands, paths, result summaries, assumptions, and limitations.
+- Run one phase at a time. Preserve each attempt's artifacts, adapter call logs, and stable IDs. In native chat, prepare with `autopilot --native` and use `native open` and `native close` for each phase. Use `native interrupt` if the actual end is unknown. Record commands, paths, result summaries, assumptions, and limitations.
 - A phase reports `blocked` when required inputs or safe execution are unavailable. `needs-review` means a human decision or review resolution is required. `needs-approval` is reserved for the explicit approval gate. Autopilot stops in each case; these statuses are not interchangeable.
 - For high-risk or explicitly gated work, stop after plan/design. A human approval states scope and constraints; silence is not approval.
 - Test proves behavior at a chosen level. Review independently searches for defects and weak evidence. Verify maps each required acceptance criterion to current evidence; neither test nor review alone is final verification.

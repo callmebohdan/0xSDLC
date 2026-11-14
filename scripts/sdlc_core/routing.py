@@ -8,6 +8,7 @@ from typing import Any
 from .artifacts import list_value
 from .config import BASE_PHASES, MAX_FIX_ATTEMPTS_PER_FINDING, MAX_TOTAL_FIX_ATTEMPTS, ROUTE_SCHEMA_VERSION
 from .storage import utc_now
+from .telemetry import summarize
 
 
 def classify(request: str) -> str:
@@ -91,7 +92,7 @@ def route_payload(
         "human_gates": ["approval"] if "approval" in phases else [],
         "phase_states": {phase: {"status": "pending", "attempts": 0, "lanes": {"primary": {"status": "pending"}}} for phase in phases},
         "events": [{"event": "route-prepared", "at": utc_now(), "reason": f"classified as {kind} risk in {mode} mode"}],
-        "telemetry": {"calls": 0, "duration_ms": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0},
+        "telemetry": summarize([]),
         "created_at": utc_now(),
     }
 

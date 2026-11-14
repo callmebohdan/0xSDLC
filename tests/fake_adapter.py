@@ -21,14 +21,14 @@ def main() -> int:
     task_id = re.search(r"Task ID: `([^`]+)`", prompt).group(1)
     phase = re.search(r"Phase: `([^`]+)`", prompt).group(1)
     mode = os.environ.get("0XSDLC_FAKE_MODE", "complete")
-    if mode == "crash" and phase == "audit":
+    if (mode == "crash" and phase == "audit") or (mode == "repair-crash" and phase == "fix"):
         print("simulated provider process crash", file=sys.stderr)
         return 17
     output = args.output_dir / args.output_artifact
     if mode == "invalid" and phase == "audit":
         output.write_text("invalid artifact without front matter\n", encoding="utf-8")
         return 0
-    status = "verified" if phase == "verify" else "ready"
+    status = "verified" if phase == "verify" and mode != "unverified" else "ready"
     if mode == "blocked" and phase == "audit":
         status = "blocked"
     if mode == "needs-review" and phase == "audit":
@@ -36,7 +36,7 @@ def main() -> int:
     metadata = ["---", 'schema_version: "0.2"', f'task_id: "{task_id}"', f'phase: "{phase}"', f'status: "{status}"']
     if phase == "review":
         first_review = args.output_artifact == "review.md"
-        decision = "fix" if mode == "fix-loop" and first_review else "needs-review" if mode == "review-needs-review" and first_review else "approve"
+        decision = "fix" if mode in {"fix-loop", "repair-crash"} and first_review else "needs-review" if mode == "review-needs-review" and first_review else "approve"
         metadata.extend([f'decision: "{decision}"', 'blocking_findings: ["F-001"]' if decision == "fix" else "blocking_findings: []"])
     if phase == "test":
         failed = mode == "test-failure" and args.output_artifact == "test-report.md"
@@ -49,7 +49,13 @@ def main() -> int:
         metadata.extend(["route_add: [\"design\", \"approval\"]", 'route_reason: "audit found cross-boundary impact"'])
     metadata.extend(["---", "", f"# Fake {phase} artifact", "", "Deterministic evidence for harness testing."])
     output.write_text("\n".join(metadata) + "\n", encoding="utf-8")
-    args.telemetry_file.write_text(json.dumps({"input_tokens": 10, "output_tokens": 5, "cost_usd": 0.001}), encoding="utf-8")
+    if mode != "no-usage":
+        usage = {"call_id": os.environ["0XSDLC_CALL_ID"], "input_tokens": 10, "output_tokens": 5, "cost_usd": 0.001}
+        if mode == "partial-usage":
+            usage = {"call_id": usage["call_id"], "output_tokens": 0, "inference_ms": 0, "cache_read_tokens": 0}
+        if mode == "stale-usage":
+            usage["call_id"] = "stale-call-id"
+        args.telemetry_file.write_text(json.dumps(usage), encoding="utf-8")
     return 0
 
 

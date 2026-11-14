@@ -25,9 +25,10 @@ class EndToEndTests(unittest.TestCase):
         (self.workspace / "AGENTS.md").write_text("# Test project\n\nRun deterministic checks.\n", encoding="utf-8")
         self.env = os.environ.copy()
         self.env["0XSDLC_AGENTS_HOME"] = str(self.base / "agents" / "0xsdlc")
+        self.env.pop("0XSDLC_SESSIONS_ROOT", None)
         self.env["0XSDLC_GENERIC_COMMAND"] = (
-            f"{sys.executable} {FAKE} --prompt-file {{prompt_file}} --output-dir {{output_dir}} "
-            "--output-artifact {output_artifact} --telemetry-file {telemetry_file}"
+            f'"{sys.executable}" "{FAKE}" --prompt-file "{{prompt_file}}" --output-dir "{{output_dir}}" '
+            '--output-artifact "{output_artifact}" --telemetry-file "{telemetry_file}"'
         )
 
     def tearDown(self) -> None:
@@ -58,6 +59,10 @@ class EndToEndTests(unittest.TestCase):
     def route(task: Path) -> dict:
         return json.loads((task / "route.json").read_text(encoding="utf-8"))
 
+    @staticmethod
+    def metrics(task: Path) -> list[dict]:
+        return [json.loads(line) for line in (task / "metrics.jsonl").read_text(encoding="utf-8").splitlines()]
+
     def test_complete_cycle_and_telemetry(self) -> None:
         result = self.run_cli("autopilot", "fix local label", "--kind", "small", "--workspace", str(self.workspace), "--execute", "--full")
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -66,6 +71,177 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual(route["telemetry"]["calls"], 6)
         self.assertGreater(route["telemetry"]["input_tokens"], 0)
         self.assertTrue((self.latest_task() / "project-profile.json").is_file())
+
+    def test_adapter_cannot_complete_unverified_route(self) -> None:
+        result = self.run_cli("autopilot", "fix local label", "--kind", "small", "--execute", "--full", mode="unverified")
+        self.assertEqual(result.returncode, 3, result.stderr)
+        route = self.route(self.latest_task())
+        self.assertEqual(route["status"], "blocked")
+        self.assertEqual(route["current_phase"], "verify")
+        self.assertIn("requires status: verified", route["phase_states"]["verify"]["reason"])
+
+    def test_native_cannot_complete_unverified_route(self) -> None:
+        result = self.run_cli("autopilot", "verify this change", "--native", "--phase", "verify")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        task = self.latest_task()
+        result = self.run_cli("native", "open", task.name, "verify")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        opened = json.loads(result.stdout)
+        artifact = Path(opened["artifact"])
+        report = f'---\nschema_version: "0.2"\ntask_id: "{task.name}"\nphase: verify\nstatus: '
+        close = ("native", "close", task.name, opened["attempt_id"], "--outcome", "succeeded")
+        artifact.write_text(report + "ready\n---\n\nNo proof.\n", encoding="utf-8")
+        result = self.run_cli(*close)
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn("requires status: verified", result.stderr)
+        self.assertEqual(self.route(task)["status"], "running")
+        artifact.write_text(report + "verified\n---\n\nProof recorded.\n", encoding="utf-8")
+        result = self.run_cli(*close)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.route(task)["status"], "completed")
+
+    def test_session_root_precedence_and_contract_lookup(self) -> None:
+        contracts = Path(self.env["0XSDLC_AGENTS_HOME"]) / "templates"
+        contracts.mkdir(parents=True)
+        (contracts / "brief.md").write_text("Custom contract: {{request}}\n", encoding="utf-8")
+        env_root, flag_root = self.base / "environment sessions", self.base / "flag sessions"
+        self.env["0XSDLC_SESSIONS_ROOT"] = str(env_root)
+        for root, flags in ((env_root, ()), (flag_root, ("--sessions-root", str(flag_root)))):
+            result = self.run_cli("autopilot", "fix label", "--model", "generic", *flags)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            task, = root.iterdir()
+            self.assertIn("Custom contract: fix label", (task / "brief.md").read_text(encoding="utf-8"))
+            self.assertIn(task.name, self.run_cli("status", *flags).stdout)
+            result = self.run_cli("resume", task.name, "--full", "--execute", *flags)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(self.route(task)["status"], "completed")
+        self.assertFalse((contracts.parent / "sessions").exists())
+
+    def test_unwritable_session_root_fails_before_adapter(self) -> None:
+        blocked = self.base / "file instead of directory"
+        blocked.touch()
+        result = self.run_cli("autopilot", "fix label", "--sessions-root", str(blocked), "--execute", mode="crash")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn(str(blocked).casefold(), result.stderr.casefold())
+        self.assertIn("0XSDLC_SESSIONS_ROOT", result.stderr)
+        self.assertNotIn("Task:", result.stdout)
+
+    def test_unknown_and_measured_zero_usage(self) -> None:
+        for mode, output in (("no-usage", None), ("partial-usage", 0)):
+            result = self.run_cli("autopilot", f"fix label {mode}", "--execute", mode=mode)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            task = self.latest_task()
+            call, = self.metrics(task)
+            summary = self.route(task)["telemetry"]
+            for data in (call, summary):
+                self.assertIsNone(data["input_tokens"])
+                self.assertIsNone(data["cost_usd"])
+                self.assertEqual(data["output_tokens"], output)
+                self.assertEqual(data["cache_read_tokens"], output)
+                self.assertEqual(data["inference_ms"], output)
+            self.assertEqual(summary["coverage"]["output_tokens"], int(output is not None))
+            self.assertEqual(summary["coverage"]["duration_ms"], 1)
+
+    def test_retry_preserves_attempts_and_rejects_stale_usage(self) -> None:
+        result = self.run_cli("autopilot", "fix label", "--execute", "--full", "--parallel-checks", mode="blocked")
+        self.assertEqual(result.returncode, 3, result.stderr)
+        task = self.latest_task()
+        first = next(event for event in self.metrics(task) if event["lane"] == "primary")
+        first_logs = {key: (task / first["evidence"][key]).read_bytes() for key in ("prompt", "stdout", "stderr", "artifact")}
+        result = self.run_cli("resume", task.name, "--execute", "--full", mode="stale-usage")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        route = self.route(task)
+        attempts = route["phase_states"]["audit"]["attempt_history"]
+        calls = {event["call_id"]: event for event in self.metrics(task)}
+        self.assertEqual([attempt["outcome"] for attempt in attempts], ["blocked", "succeeded"])
+        for attempt in attempts:
+            self.assertLessEqual(attempt["started_at"], attempt["finished_at"])
+            call = calls[attempt["call_ids"][0]]
+            self.assertEqual(call["attempt_id"], attempt["attempt_id"])
+            self.assertGreaterEqual(attempt["duration_ms"], call["duration_ms"])
+        second = calls[attempts[1]["call_ids"][0]]
+        self.assertEqual(len(attempts[1]["call_ids"]), 3)
+        self.assertNotEqual(first["call_id"], second["call_id"])
+        self.assertIsNone(second["input_tokens"])
+        self.assertIn("does not match", second["telemetry_warning"])
+        for key, content in first_logs.items():
+            self.assertNotEqual(first["evidence"][key], second["evidence"][key])
+            self.assertEqual((task / first["evidence"][key]).read_bytes(), content)
+        self.assertEqual(route["telemetry"]["input_tokens"], 20)
+        self.assertEqual(route["telemetry"]["coverage"]["input_tokens"], 2)
+        self.assertEqual(self.run_cli("resume", task.name).returncode, 0)
+        self.assertEqual(self.route(task)["telemetry"], route["telemetry"])
+
+    def test_repair_resume_keeps_the_same_repair_budget(self) -> None:
+        result = self.run_cli("autopilot", "fix label", "--execute", "--full", mode="repair-crash")
+        self.assertEqual(result.returncode, 17, result.stderr)
+        task = self.latest_task()
+        before = self.route(task)
+        self.assertEqual(before["active_repair"]["phase"], "fix")
+        result = self.run_cli("resume", task.name, "--execute", "--full")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        after = self.route(task)
+        self.assertEqual(after["status"], "completed")
+        self.assertNotIn("active_repair", after)
+        self.assertEqual(after["fix_attempts"], 1)
+        history = after["phase_states"]["fix"]["attempt_history"]
+        self.assertEqual([attempt["outcome"] for attempt in history], ["failed", "succeeded"])
+        self.assertNotEqual(history[0]["artifacts"], history[1]["artifacts"])
+
+    def test_native_chat_records_elapsed_and_unknown_interrupted_end(self) -> None:
+        result = self.run_cli("autopilot", "audit this change", "--native", "--phase", "audit")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        task = self.latest_task()
+        result = self.run_cli("native", "open", task.name, "audit")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        first = json.loads(result.stdout)
+        result = self.run_cli("native", "interrupt", task.name, first["attempt_id"])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.run_cli("native", "open", task.name, "audit")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        second = json.loads(result.stdout)
+        self.assertNotEqual(first["artifact"], second["artifact"])
+        Path(second["artifact"]).write_text(
+            f'---\nschema_version: "0.2"\ntask_id: "{task.name}"\nphase: audit\nstatus: ready\n---\n\n# Evidence\n',
+            encoding="utf-8",
+        )
+        result = self.run_cli("native", "close", task.name, second["attempt_id"], "--outcome", "succeeded")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        route = self.route(task)
+        interrupted, closed = route["phase_states"]["audit"]["attempt_history"]
+        self.assertEqual((interrupted["outcome"], interrupted["provenance"]), ("interrupted", "retrospective"))
+        self.assertIsNone(interrupted["finished_at"])
+        self.assertIsNone(interrupted["duration_ms"])
+        self.assertEqual(route["status"], "completed")
+        self.assertGreaterEqual(closed["duration_ms"], 0)
+        self.assertLessEqual(closed["started_at"], closed["finished_at"])
+        for field in ("inference_ms", "adapter_wall_ms", "cost_usd", "input_tokens", "output_tokens"):
+            self.assertIsNone(closed[field])
+        self.assertEqual(closed["call_ids"], [])
+        self.assertEqual(self.run_cli("resume", task.name, "--execute", "--full").returncode, 2)
+
+    def test_legacy_metrics_are_kept_separate_and_recovery_reports_cannot_resume(self) -> None:
+        self.assertEqual(self.run_cli("autopilot", "fix label").returncode, 0)
+        task = self.latest_task()
+        route = self.route(task)
+        old_metrics = {"calls": 2, "duration_ms": 25, "input_tokens": 24, "output_tokens": 16, "cost_usd": 0.02}
+        route["telemetry"] = old_metrics
+        route_path, metrics_path = task / "route.json", task / "metrics.jsonl"
+        route_path.write_text(json.dumps(route), encoding="utf-8")
+        original = '{"phase":"audit","duration_ms":25}\n'
+        metrics_path.write_text(original, encoding="utf-8")
+        result = self.run_cli("resume", task.name)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        route = self.route(task)
+        self.assertEqual(route["legacy_telemetry"], old_metrics)
+        self.assertIsNone(route["telemetry"]["input_tokens"])
+        self.assertEqual(metrics_path.read_text(encoding="utf-8"), original)
+        route["provenance"] = "retrospective"
+        route_path.write_text(json.dumps(route), encoding="utf-8")
+        result = self.run_cli("resume", task.name, "--execute", "--full")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("retrospective", result.stderr)
+        self.assertEqual(self.route(task), route)
 
     def test_assessment_route_never_implements_or_runs_product_tests(self) -> None:
         result = self.run_cli(
@@ -151,7 +327,8 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual(route["telemetry"]["calls"], 8)
         self.assertTrue((task / "review-maintainability.md").is_file())
         self.assertTrue((task / "review-synthesis.md").is_file())
-        prompt = (task / "prompt-review-maintainability.md").read_text(encoding="utf-8")
+        call = next(event for event in self.metrics(task) if event["lane"] == "maintainability")
+        prompt = (task / call["evidence"]["prompt"]).read_text(encoding="utf-8")
         self.assertIn("# C++ engineering profile", prompt)
         self.assertIn("# Maintainability review lane", prompt)
 
@@ -177,6 +354,12 @@ class EndToEndTests(unittest.TestCase):
             synthesis["inputs"],
             ["review.md", "review-secondary.md", "review-maintainability.md"],
         )
+        attempt, = route["phase_states"]["review"]["attempt_history"]
+        calls = [event for event in self.metrics(task) if event["attempt_id"] == attempt["attempt_id"]]
+        self.assertEqual({event["lane"] for event in calls}, {"primary", "secondary", "maintainability", "review"})
+        self.assertEqual(set(attempt["call_ids"]), {event["call_id"] for event in calls})
+        self.assertGreaterEqual(attempt["duration_ms"], max(event["duration_ms"] for event in calls))
+        self.assertTrue(all((task / event["evidence"]["artifact"]).is_file() for event in calls))
 
     def test_blocked_artifact_stops(self) -> None:
         result = self.run_cli("autopilot", "fix local label", "--kind", "small", "--workspace", str(self.workspace), "--execute", "--full", mode="blocked")
@@ -212,7 +395,8 @@ class EndToEndTests(unittest.TestCase):
         route = self.route(task)
         self.assertEqual(route["status"], "blocked")
         self.assertEqual(route["phase_states"]["audit"]["status"], "failed")
-        self.assertIn("simulated provider process crash", (task / "adapter-audit.stderr.txt").read_text(encoding="utf-8"))
+        call = self.metrics(task)[0]
+        self.assertIn("simulated provider process crash", (task / call["evidence"]["stderr"]).read_text(encoding="utf-8"))
 
     def test_invalid_artifact_is_rejected(self) -> None:
         result = self.run_cli("autopilot", "fix local label", "--kind", "small", "--workspace", str(self.workspace), "--execute", "--full", mode="invalid")

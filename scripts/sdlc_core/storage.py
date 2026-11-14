@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import datetime as dt
+import errno
 import json
 import os
 import socket
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 
 
 def utc_now() -> str:
@@ -37,35 +38,115 @@ def write_json(path: Path, value: dict[str, Any], *, backup: bool = False) -> No
     write_text(path, json.dumps(value, indent=2), backup=backup)
 
 
+def check_session_writable(path: Path) -> None:
+    probe = path / f".0xsdlc-write-probe-{uuid.uuid4().hex}"
+    try:
+        write_text(probe, "create")
+        write_text(probe, "replace")
+        probe.unlink()
+    except OSError as exc:
+        raise OSError(
+            f"cannot create and atomically replace session files in {path}: {exc}. "
+            "Choose a writable, Git-ignored path with --sessions-root or "
+            "0XSDLC_SESSIONS_ROOT. For an existing session, use its writable directory."
+        ) from exc
+
+
+def process_is_alive(pid: int) -> bool:
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        open_process = kernel32.OpenProcess
+        open_process.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+        open_process.restype = wintypes.HANDLE
+        handle = open_process(0x00100000, False, pid)  # SYNCHRONIZE
+        if not handle:
+            return ctypes.get_last_error() != 87  # ERROR_INVALID_PARAMETER: PID does not exist
+        wait = kernel32.WaitForSingleObject
+        wait.argtypes = (wintypes.HANDLE, wintypes.DWORD)
+        wait.restype = wintypes.DWORD
+        close_handle = kernel32.CloseHandle
+        close_handle.argtypes = (wintypes.HANDLE,)
+        try:
+            return wait(handle, 0) != 0  # WAIT_OBJECT_0: process exited
+        finally:
+            close_handle(handle)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except (PermissionError, OverflowError):
+        pass
+    return True
+
+
+def lock_file(handle: BinaryIO) -> None:
+    if os.name == "nt":
+        import msvcrt
+
+        handle.seek(0)
+        msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+    else:
+        import fcntl
+
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
 class TaskLock:
-    """Portable exclusive lock with an explicit stale-lock recovery policy."""
+    """Hold an OS lock until the handle closes, including on process exit."""
 
     def __init__(self, task_dir: Path, stale_seconds: int = 1800) -> None:
         self.path = task_dir / ".0xsdlc.lock"
+        self.guard = task_dir / ".0xsdlc.guard"
         self.stale_seconds = stale_seconds
-        self.acquired = False
+        self.handle: BinaryIO | None = None
+
+    def check_previous_marker(self) -> None:
+        try:
+            owner = read_json(self.path)
+        except FileNotFoundError:
+            return
+        except (UnicodeError, ValueError) as exc:
+            raise RuntimeError(f"unreadable legacy task lock: {self.path}") from exc
+        if isinstance(owner, dict) and owner.get("guarded") is True:
+            return
+        pid = owner.get("pid") if isinstance(owner, dict) else None
+        if (
+            type(pid) is not int or not 0 < pid < 2**31 or owner.get("host") != socket.gethostname()
+            or dt.datetime.now().timestamp() - self.path.stat().st_mtime <= self.stale_seconds
+            or process_is_alive(pid)
+        ):
+            raise RuntimeError(f"cannot recover legacy task lock: {self.path}; verify its owner has exited")
 
     def __enter__(self) -> "TaskLock":
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        if self.path.exists():
-            age = dt.datetime.now().timestamp() - self.path.stat().st_mtime
-            if age <= self.stale_seconds:
-                owner = self.path.read_text(encoding="utf-8", errors="replace").strip()
-                raise RuntimeError(f"task is locked by another run: {owner}")
-            self.path.unlink()
-        payload = json.dumps({"pid": os.getpid(), "host": socket.gethostname(), "acquired_at": utc_now()})
+        # Keep the guard file so every contender locks the same file, even across restarts.
+        handle = self.guard.open("a+b")
         try:
-            with self.path.open("x", encoding="utf-8") as handle:
-                handle.write(payload)
-        except FileExistsError as exc:
-            raise RuntimeError("task was locked concurrently") from exc
-        self.acquired = True
+            try:
+                lock_file(handle)
+            except OSError as exc:
+                if exc.errno in {errno.EACCES, errno.EAGAIN, errno.EDEADLK}:
+                    raise RuntimeError(f"task is locked by another run: {self.path.parent}") from exc
+                raise
+            self.check_previous_marker()
+            payload = {"pid": os.getpid(), "host": socket.gethostname(), "acquired_at": utc_now(), "guarded": True}
+            write_json(self.path, payload)
+        except BaseException:
+            handle.close()
+            raise
+        self.handle = handle
         return self
 
     def __exit__(self, *_: object) -> None:
-        if self.acquired and self.path.exists():
-            self.path.unlink()
-        self.acquired = False
+        if self.handle is not None:
+            try:
+                self.path.unlink(missing_ok=True)
+            finally:
+                self.handle.close()
+                self.handle = None
 
 
 def recover_interrupted(route: dict[str, Any]) -> bool:
@@ -73,9 +154,18 @@ def recover_interrupted(route: dict[str, Any]) -> bool:
     recovered = False
     for phase, state in route.get("phase_states", {}).items():
         if state.get("status") == "running":
-            state.update({"status": "blocked", "finished_at": utc_now(), "reason": "previous run interrupted"})
+            now = utc_now()
+            state.update({"status": "blocked", "finished_at": None, "reason": "previous run interrupted"})
+            for lane in state.get("lanes", {}).values():
+                if lane.get("status") == "running":
+                    lane["status"] = "interrupted"
+            for attempt in state.get("attempt_history", []):
+                if attempt["outcome"] == "running":
+                    attempt.update(outcome="interrupted", recovered_at=now, provenance="retrospective")
             route.setdefault("events", []).append({
-                "event": "run-interrupted", "phase": phase, "at": utc_now(),
+                "event": "run-interrupted", "phase": phase, "at": now,
+                "attempt_id": state.get("attempt_id"), "started_at": state.get("started_at"),
+                "finished_at": None, "provenance": "retrospective",
                 "reason": "phase was still running when the task was reopened",
             })
             recovered = True
