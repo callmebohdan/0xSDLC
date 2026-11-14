@@ -93,9 +93,14 @@ def sessions_root(override: Path | None = None, workspace: Path | None = None) -
 
 
 def session_roots(override: Path | None = None, workspace: Path | None = None) -> list[Path]:
-    """Return the selected root and, for default lookup, the legacy root if distinct."""
+    """Return the selected root and legacy roots for default lookup."""
     selected = sessions_root(override, workspace)
     if override is not None or os.environ.get("0XSDLC_SESSIONS_ROOT"):
         return [selected]
-    legacy = legacy_sessions_root()
-    return [selected] if selected == legacy.resolve() else [selected, legacy.resolve()]
+    project = project_root(workspace)
+    legacy_roots = []
+    logs = project / "logs"
+    if logs.is_dir():
+        legacy_roots.extend(path.resolve() for path in logs.iterdir() if path.is_dir())
+    legacy_roots.append(legacy_sessions_root().resolve())
+    return list(dict.fromkeys([selected, *legacy_roots]))

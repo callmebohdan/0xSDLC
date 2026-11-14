@@ -142,6 +142,20 @@ class EndToEndTests(unittest.TestCase):
         task = self.latest_task()
         self.assertEqual(task.parent, self.workspace / ".agents" / "0xsdlc" / "sessions")
 
+    def test_legacy_project_logs_task_lookup(self) -> None:
+        result = self.run_cli("autopilot", "fix legacy log task", "--model", "generic")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        task = self.latest_task()
+        legacy_root = self.workspace / "logs" / "legacy-project"
+        legacy_root.mkdir(parents=True)
+        legacy_task = legacy_root / task.name
+        task.rename(legacy_task)
+
+        self.assertIn(task.name, self.run_cli("status").stdout)
+        result = self.run_cli("resume", task.name)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(str(legacy_task).casefold(), result.stdout.casefold())
+
     def test_unwritable_session_root_fails_before_adapter(self) -> None:
         blocked = self.base / "file instead of directory"
         blocked.touch()
