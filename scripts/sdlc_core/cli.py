@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import re
 import sys
@@ -21,7 +22,7 @@ from .config import (
     sessions_root,
 )
 from .native import close_phase, interrupt_phase, open_phase
-from .project import agents_draft, current_git_branch, project_profile
+from .project import agents_draft, current_git_branch, project_profile, readiness_report
 from .prompts import prompt_for
 from .providers import select_model, validate_profiles
 from .routing import classify, infer_mode, migrate_route, needs_design, route_payload
@@ -92,9 +93,15 @@ def create_task(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], s
     write_text(task_dir / "brief.md", render_template(library_path("templates/brief.md"), {"task_id": task_id, "request": args.request, "mode": mode}))
     profile = project_profile(workspace)
     write_json(task_dir / "project-profile.json", profile)
-    if not (workspace / "AGENTS.md").is_file():
-        write_text(task_dir / "project-context.md", agents_draft(profile))
-        route["events"].append({"event": "project-instructions-missing", "at": utc_now(), "reason": "using task-local project context; run bootstrap to propose AGENTS.md"})
+    if profile["agents"]["status"] != "ready":
+        existing = (workspace / "AGENTS.md").read_text(encoding="utf-8", errors="replace") if (workspace / "AGENTS.md").is_file() else None
+        context = agents_draft(profile) if existing is None else readiness_report(profile)
+        write_text(task_dir / "project-context.md", context)
+        route["events"].append({
+            "event": f"project-instructions-{profile['agents']['status']}",
+            "at": utc_now(),
+            "reason": "; ".join(profile["agents"]["findings"]),
+        })
     save_route(task_dir / "route.json", route)
     write_text(task_dir / f"prompt-{route['current_phase']}.md", prompt_for(task_dir, workspace, route["current_phase"], model))
     return task_dir, workspace, route, model
@@ -259,6 +266,9 @@ def cmd_resume(args: argparse.Namespace) -> int:
 
 
 def cmd_bootstrap(args: argparse.Namespace) -> int:
+    if args.check and (args.adopt or args.write):
+        print("Use --check by itself; it does not prepare or adopt a draft.", file=sys.stderr)
+        return 2
     if args.adopt:
         if args.write:
             print("Use either --adopt or --write, not both.", file=sys.stderr)
@@ -275,15 +285,24 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
                 target = workspace / "AGENTS.md"
                 if not draft.is_file():
                     raise ValueError("reviewed agents-draft.md is missing")
-                if target.exists():
-                    raise ValueError(f"refusing to overwrite existing {target}")
+                profile = read_json(task_dir / "project-profile.json")
+                original_sha = profile.get("agents", {}).get("sha256")
+                if original_sha is None:
+                    if target.exists():
+                        raise ValueError(f"{target} was created after the draft; prepare a fresh readiness report")
+                else:
+                    if not target.is_file():
+                        raise ValueError(f"{target} was removed after the draft; prepare a fresh readiness report")
+                    current_sha = hashlib.sha256(target.read_bytes()).hexdigest()
+                    if current_sha != original_sha:
+                        raise ValueError(f"{target} changed after the draft was prepared; prepare a fresh readiness report")
                 write_text(target, draft.read_text(encoding="utf-8"))
                 for phase in ("approval", "implement", "verify"):
                     route["phase_states"][phase]["status"] = "succeeded"
                 route.update({"status": "completed", "current_phase": "verify", "completed_at": utc_now()})
                 route["events"].append({"event": "bootstrap-adopted", "at": utc_now(), "reason": args.approve, "artifact": str(target)})
                 save_route(task_dir / "route.json", route)
-                print(f"Created reviewed project instructions: {target}")
+                print(f"Adopted reviewed project instructions: {target}")
                 return 0
         except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
             print(f"Cannot adopt bootstrap draft: {exc}", file=sys.stderr)
@@ -293,13 +312,17 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
         print(f"Workspace is not a directory: {workspace}", file=sys.stderr)
         return 2
     target = workspace / "AGENTS.md"
+    profile = project_profile(workspace)
+    if args.check:
+        print(readiness_report(profile))
+        return 0
     if args.write and not args.approve:
         print("--write requires --approve with the human review decision.", file=sys.stderr)
         return 2
     if args.write and target.exists():
-        print(f"Refusing to overwrite existing {target}; prepare a draft for a reviewed manual update.", file=sys.stderr)
+        print(f"Refusing to replace existing {target} with --write; review the draft and adopt it instead.", file=sys.stderr)
         return 2
-    task_id = now_id(f"bootstrap-{workspace.name}")
+    task_id = now_id(f"init-{workspace.name}")
     root = sessions_root(args.sessions_root, workspace)
     try:
         check_session_writable(root)
@@ -308,37 +331,44 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
     except OSError as exc:
         print(f"Cannot prepare bootstrap task: {exc}", file=sys.stderr)
         return 2
-    profile = project_profile(workspace)
-    draft = agents_draft(profile)
+    existing_agents = target.read_text(encoding="utf-8", errors="replace") if target.is_file() else None
+    draft = agents_draft(profile, existing_agents)
     write_json(task_dir / "project-profile.json", profile)
-    write_text(task_dir / "agents-draft.md", draft)
+    write_text(task_dir / "readiness.md", readiness_report(profile))
+    ready = profile["agents"]["status"] == "ready"
+    if not ready:
+        write_text(task_dir / "agents-draft.md", draft)
     write_json(task_dir / "route.json", {
-        "schema_version": ROUTE_SCHEMA_VERSION, "task_id": task_id, "request": "Bootstrap project AGENTS.md",
+        "schema_version": ROUTE_SCHEMA_VERSION, "task_id": task_id, "request": "Initialize project readiness",
         "mode": "change",
         "workspace": str(workspace), "git_branch": current_git_branch(workspace),
         "classification": "standard", "model": "deterministic",
-        "status": "needs-approval" if not args.write else "completed", "current_phase": "approval" if not args.write else "verify",
+        "status": "completed" if args.write or ready else "needs-approval", "current_phase": "verify" if args.write or ready else "approval",
         "phases": ["audit", "approval", "implement", "verify"],
         "phase_states": {
             "audit": {"status": "succeeded", "attempts": 1, "lanes": {"primary": {"status": "succeeded"}}},
-            "approval": {"status": "needs-approval" if not args.write else "succeeded", "attempts": 0, "lanes": {"primary": {"status": "pending"}}},
-            "implement": {"status": "pending" if not args.write else "succeeded", "attempts": 0, "lanes": {"primary": {"status": "pending"}}},
-            "verify": {"status": "pending" if not args.write else "succeeded", "attempts": 0, "lanes": {"primary": {"status": "pending"}}},
+            "approval": {"status": "needs-approval" if not args.write and not ready else "succeeded", "attempts": 0, "lanes": {"primary": {"status": "pending"}}},
+            "implement": {"status": "pending" if not args.write and not ready else "succeeded", "attempts": 0, "lanes": {"primary": {"status": "pending"}}},
+            "verify": {"status": "pending" if not args.write and not ready else "succeeded", "attempts": 0, "lanes": {"primary": {"status": "pending"}}},
         },
         "routing": {"design": False, "approval": True, "maintainability_review": False, "quality_control": False}, "limits": {}, "human_gates": ["approval"],
-        "events": [{"event": "bootstrap-draft-created", "at": utc_now(), "reason": "derived from repository evidence"}],
+        "events": [{"event": "project-readiness-assessed", "at": utc_now(), "reason": profile["agents"]["status"]}],
         "telemetry": summarize([]), "created_at": utc_now(),
     })
     if args.write:
         write_text(target, draft)
         print(f"Created reviewed project instructions: {target}")
     else:
-        print(f"Draft prepared for human review: {task_dir / 'agents-draft.md'}")
-        print(
-            "To adopt this exact draft: "
-            f'python scripts\\0xSDLC.py bootstrap --adopt "{task_dir}" '
-            '--approve "reviewed project instructions"'
-        )
+        print(f"Readiness: {profile['agents']['status']}\nReport: {task_dir / 'readiness.md'}")
+        if ready:
+            print("Project instructions look ready; no AGENTS.md draft was needed.")
+        else:
+            print(f"Draft prepared for human review: {task_dir / 'agents-draft.md'}")
+            print(
+                "To adopt this exact draft: "
+                f'python scripts\\0xSDLC.py init --adopt "{task_dir}" '
+                '--approve "reviewed project instructions"'
+            )
     return 0
 
 
@@ -438,11 +468,12 @@ def build_parser() -> argparse.ArgumentParser:
     resume.add_argument("--stale-lock-seconds", type=int, default=1800, help="minimum age to recover a legacy lock whose local owner has exited")
     resume.set_defaults(func=cmd_resume)
 
-    bootstrap = sub.add_parser("bootstrap", help="derive a reviewable AGENTS.md draft from repository evidence")
+    bootstrap = sub.add_parser("bootstrap", aliases=["init"], help="assess project readiness and prepare a reviewable AGENTS.md draft")
     bootstrap.add_argument("--workspace", type=Path, default=Path.cwd())
     bootstrap.add_argument("--adopt", metavar="TASK_ID", help="adopt the exact reviewed draft from an existing bootstrap task")
-    bootstrap.add_argument("--write", action="store_true", help="create AGENTS.md only when it does not exist")
-    bootstrap.add_argument("--approve", help="human review decision required with --write")
+    bootstrap.add_argument("--check", action="store_true", help="print readiness without creating a session or draft")
+    bootstrap.add_argument("--write", action="store_true", help="create a missing AGENTS.md directly; requires --approve")
+    bootstrap.add_argument("--approve", help="human review decision required with --write or --adopt")
     bootstrap.set_defaults(func=cmd_bootstrap)
 
     status = sub.add_parser("status", help="list generated task routes")

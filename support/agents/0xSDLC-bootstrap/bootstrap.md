@@ -2,11 +2,11 @@
 
 ## Mission
 
-Create a reviewable project-level `AGENTS.md` when a repository does not have one. Derive instructions from observable project evidence and clearly label unresolved areas; never convert guesses into permanent instructions.
+Assess whether a repository has useful project-level `AGENTS.md` guidance. Detect missing and inadequate files, derive findings from observable repository evidence, and prepare a reviewable draft when gaps exist. Never convert guesses into permanent instructions.
 
 ## When to use
 
-- Once when onboarding an existing repository without `AGENTS.md`.
+- Once when onboarding a repository, or when readiness checks find concrete gaps in `AGENTS.md`.
 - After a major toolchain or repository-layout change when the existing instructions are demonstrably stale.
 - When repeated task audits rediscover the same commands, boundaries, and conventions.
 
@@ -19,18 +19,20 @@ Inspect README files, package/build manifests, lock files, CI configuration, tes
 ## Procedure
 
 1. Record repository root, branch, existing changes, detected ecosystems, and evidence files.
-2. Extract exact setup, build, test, lint, format, and development commands. Mark unexecuted commands as unverified.
-3. Describe source, test, documentation, generated, vendored, and sensitive locations.
-4. Detect languages and capture style and architecture only where code/config consistently supports it. Separate formatter/linter/compiler settings from inferred local habits.
-5. Capture Git/PR rules only from explicit project documentation or configuration.
-6. Add always/ask/never boundaries, including secrets and external side effects.
-7. List unresolved information rather than filling it with generic assumptions.
-8. Write `agents-draft.md` in the task session. A human reviews it before `AGENTS.md` is created or updated.
-9. When no explicit engineering standard exists, list the unresolved choice and optionally recommend the applicable 0xSDLC language profile as a starting point; do not present it as adopted policy.
+2. Inspect existing `AGENTS.md` for usable project-specific commands, verification guidance, CI references, style rules, and unresolved placeholders. Treat this as a heuristic readiness check; report its findings and evidence.
+3. Inspect package/build manifests, Make targets, test configuration, CI workflows, test directories, and formatter/linter settings. Extract exact build, test, lint, format, and development commands where repository configuration supports them. Mark inferred or unexecuted commands as unverified.
+4. Describe source, test, documentation, generated, vendored, and sensitive locations.
+5. Detect languages and capture style and architecture only where code/config consistently supports it. Separate formatter/linter/compiler settings from inferred local habits.
+6. Capture Git/PR rules only from explicit project documentation or configuration.
+7. Add always/ask/never boundaries, including secrets and external side effects.
+8. List unresolved information rather than filling it with generic assumptions.
+9. Write `readiness.md` and `project-profile.json` in the task session. If `AGENTS.md` is missing or inadequate, write `agents-draft.md`; preserve existing instructions and append evidence-backed setup guidance for an inadequate file. A human reviews before adoption.
+10. When no explicit engineering standard exists, list the unresolved choice and optionally recommend the applicable 0xSDLC language profile as a starting point; do not present it as adopted policy.
 
 ## Guardrails
 
-- Never overwrite an existing `AGENTS.md` automatically.
+- Never create or update repository instructions without an explicit adoption decision.
+- Before adopting an update, verify the original `AGENTS.md` still matches the version assessed for the draft; ask for a fresh assessment if it changed.
 - Never include secrets, private URLs, local credentials, or machine-specific paths unless the repository explicitly requires a portable placeholder.
 - Do not claim a command works unless it was executed successfully in the stated environment.
 - Keep stable project rules in `AGENTS.md`; task-specific requirements remain in the task spec.
@@ -38,4 +40,4 @@ Inspect README files, package/build manifests, lock files, CI configuration, tes
 
 ## Output
 
-Produce `project-profile.json` and `agents-draft.md` in the session directory. Adoption is a separate approved write of that exact reviewed artifact to the repository root (`bootstrap --adopt TASK_ID --approve "decision"`). Report evidence sources, inferred statements, unverified commands, and unresolved setup.
+Use `0xSDLC init --check --workspace <repo>` for a non-persistent readiness report. Use `0xSDLC init --workspace <repo>` to save `project-profile.json` and `readiness.md` in the session directory and, when there are instruction gaps, `agents-draft.md`. `bootstrap` remains an alias. Adoption is a separate approved write of the exact reviewed artifact (`init --adopt TASK_ID --approve "decision"`). Report evidence sources, inferred statements, unverified commands, and unresolved setup.
