@@ -24,6 +24,8 @@ assumptions: []
 | Criterion | Direct evidence | Evidence freshness | Result | Gap/action |
 | --- | --- | --- | --- | --- |
 
+Use `pass`, `fail`, `blocked`, `needs-review`, or `not-required`. An unavailable environment capability or failed required command keeps the affected criterion `blocked` or `needs-review`; do not mark it passing because unrelated checks passed. Overall status cannot be `verified` while any required criterion is blocked or needs review.
+
 ## Required gates
 
 | Gate | Required? | Evidence/approval | Result |
