@@ -2,18 +2,54 @@
 
 from __future__ import annotations
 
+import importlib.util
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = ROOT / "scripts" / "install.py"
+INSTALLER_SPEC = importlib.util.spec_from_file_location("sdlc_installer", INSTALLER)
+assert INSTALLER_SPEC is not None and INSTALLER_SPEC.loader is not None
+INSTALLER_MODULE = importlib.util.module_from_spec(INSTALLER_SPEC)
+INSTALLER_SPEC.loader.exec_module(INSTALLER_MODULE)
 
 
 class InstallTests(unittest.TestCase):
+    def test_failed_rollback_preserves_backup_and_reports_recovery_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            stage_root = root / ".0xsdlc-stage-test"
+            stage_root.mkdir()
+            destination = root / "published.txt"
+            destination.write_text("original", encoding="utf-8")
+            staged = stage_root / "new"
+            staged.write_text("replacement", encoding="utf-8")
+            backup = stage_root / "backup"
+            operation = {"root": root, "destination": destination, "staged": staged, "backup": backup}
+            real_replace = INSTALLER_MODULE.os.replace
+            calls = 0
+
+            def fail_publish_and_restore(source: Path, target: Path) -> None:
+                nonlocal calls
+                calls += 1
+                if calls in (2, 3):
+                    raise OSError("simulated filesystem failure")
+                real_replace(source, target)
+
+            with patch.object(INSTALLER_MODULE.os, "replace", side_effect=fail_publish_and_restore):
+                with self.assertRaisesRegex(OSError, "rollback was incomplete") as raised:
+                    INSTALLER_MODULE.apply_staged([operation], [stage_root])
+
+            self.assertIn(str(stage_root), str(raised.exception))
+            self.assertTrue(stage_root.is_dir())
+            self.assertTrue(backup.is_file())
+            self.assertEqual(backup.read_text(encoding="utf-8"), "original")
+
     def test_force_removes_stale_published_files_but_preserves_sessions(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
