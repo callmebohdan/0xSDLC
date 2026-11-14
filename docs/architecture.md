@@ -7,7 +7,7 @@ user request
     ↓
 route classifier + deterministic brief
     ↓
-.agents/0xsdlc/sessions/<task-id>/route.json + brief.md
+<project-root>/.agents/0xSDLC/sessions/<task-id>/route.json + brief.md
     ↓
 focused phase prompt
     ↓
@@ -42,7 +42,7 @@ The canonical public entry point is `scripts/0xSDLC.py`. Internal responsibiliti
 
 ## Why files instead of shared memory
 
-Files are inspectable, versionable, portable across model vendors, and cheap to load selectively. `.agents/0xsdlc/sessions/<task-id>/` is a context-reset boundary: a fresh model can resume from evidence without replaying a long conversation.
+Files are inspectable, versionable, portable across model vendors, and cheap to load selectively. `<project-root>/.agents/0xSDLC/sessions/<task-id>/` is a context-reset boundary: a fresh model can resume from evidence without replaying a long conversation. The user-level `.agents/0xsdlc/` directory stores shared runtime contracts and tools.
 
 ## Context layering
 

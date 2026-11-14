@@ -20,7 +20,9 @@ From this repository:
 python scripts\install.py
 ```
 
-The default destination is `%USERPROFILE%\\.agents\\0xsdlc` on Windows and `~/.agents/0xsdlc` on macOS/Linux. The installer refuses to publish into a non-empty destination unless `--force` is supplied.
+The shared runtime library is installed into `%USERPROFILE%\\.agents\\0xsdlc` on Windows or `~/.agents/0xsdlc` on macOS/Linux. Project instructions and project task artifacts use the current repository: `AGENTS.md` (plus applicable nested `AGENTS.md` files) and `<project-root>/.agents/0xSDLC/sessions/<task-id>/`. These locations serve different purposes.
+
+The first install refuses occupied destinations unless you request an upgrade. `--upgrade` (the backward-compatible `--force` alias) replaces only the published 0xSDLC contract paths and the three named 0xSDLC skill folders. It preserves legacy runtime `sessions/`, project-local `.agents/0xSDLC/sessions/`, sibling skills, and other files outside those managed paths. Edits inside a published contract or 0xSDLC skill folder are replaced by the repository copy. The installer checks every destination before writing and stages updates so a provider-skill collision cannot leave only the runtime updated.
 
 For a controlled location:
 
@@ -45,15 +47,15 @@ python scripts\0xSDLC.py autopilot "Add CSV export to reports"
 python scripts\0xSDLC.py status
 ```
 
-Inspect `%USERPROFILE%\\.agents\\0xsdlc\\sessions\\<task-id>\\brief.md`, `route.json`, and the first prompt before execution.
+Inspect `<project-root>\\.agents\\0xSDLC\\sessions\\<task-id>\\brief.md`, `route.json`, and the first prompt before execution. The runtime library path is not used for new project sessions.
 
 The single rollout command publishes runtime contracts plus portable Codex, Claude Code, Cursor, and shared skill wrappers:
 
 ```text
-python scripts\\install.py --force
+python scripts\\install.py --upgrade
 ```
 
-The default skill destinations are the user-level `.codex/skills`, `.claude/skills`, `.cursor/skills`, and `.agents/skills` directories. Provider-specific directory options support custom locations, and `--skills-dir` remains a backward-compatible alias for the Codex destination. Use `--skip-provider-skills` for a contracts-only rollout.
+The default skill destinations are the user-level `.codex/skills`, `.claude/skills`, `.cursor/skills`, and `.agents/skills` directories. Provider-specific directory options support custom locations, and `--skills-dir` remains a backward-compatible alias for the Codex destination. Use `--skip-provider-skills` for a contracts-only rollout. You can repeat an initial install with no flags only when all targets are empty; use `--upgrade` to replace the managed 0xSDLC paths in an existing installation.
 
 Filesystem placement does not prove interactive discovery. Restart or rescan each host and run a harmless invocation before recording live conformance.
 
@@ -81,5 +83,5 @@ Validation checks the repository source library and manifest. It does not prove 
 1. Change the versioned files under the root-level `0xSDLC-*`, `support/`, `templates/`, or convention folders.
 2. Run validation and a representative dry-run.
 3. Review the diff as a harness change.
-4. Republish with `scripts/install.py`.
+4. Republish with `scripts/install.py --upgrade` to replace the managed 0xSDLC paths.
 5. Record compatibility or migration notes if contracts or templates changed.

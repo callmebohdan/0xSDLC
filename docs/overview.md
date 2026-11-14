@@ -64,7 +64,7 @@ Do not add these merely because they sound advanced. Add them after real task ev
 
 - Root-level `0xSDLC-*`, `support/adapters/`, `support/integrations/`, `templates/`, and `support/conventions/`: versioned source contracts in this repository.
 - user-level `.agents/0xsdlc`: published copy for model CLIs that need a global location.
-- `.agents/0xsdlc/sessions/`: generated task briefs, prompts, reports, and adapter transcripts.
+- `<project-root>/.agents/0xSDLC/sessions/`: generated task briefs, prompts, reports, and adapter transcripts. The user-level `.agents/0xsdlc/` stores the shared runtime library.
 - `scripts/`: dependency-free orchestration, installation, and validation utilities.
 - `docs/`: design rationale, integrations, and operational guidance.
 

@@ -86,9 +86,16 @@ def prompt_for(
     project_instructions = workspace / "AGENTS.md"
     project_context = ""
     if project_instructions.is_file():
-        project_context = f"\n## Project instructions\n\n{project_instructions.read_text(encoding='utf-8', errors='replace')}\n"
+        project_context = (
+            f"\n## Project instructions\n\n{project_instructions.read_text(encoding='utf-8', errors='replace')}\n\n"
+            "Before acting on files below the repository root, locate and read the nearest nested `AGENTS.md` "
+            "files that apply to those paths. For work spanning multiple subtrees, follow each subtree's instructions.\n"
+        )
     else:
-        project_context = "\n## Project instructions\n\nNo root `AGENTS.md` exists. Use `project-context.md` if supplied; do not invent repository commands or conventions.\n"
+        project_context = (
+            "\n## Project instructions\n\nNo root `AGENTS.md` exists. Check for applicable nested `AGENTS.md` files. "
+            "Use `project-context.md` if supplied; do not invent repository commands or conventions.\n"
+        )
     readiness_context = task_dir / "project-context.md"
     if readiness_context.is_file():
         project_context += f"\n## Project readiness evidence\n\n{readiness_context.read_text(encoding='utf-8', errors='replace')}\n"

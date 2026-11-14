@@ -15,7 +15,7 @@
 - `docs/operations/` contains how to load and execute agents.
 - `orchestrator/` contains route/manifest and orchestration design.
 - `scripts/` contains dependency-free implementation utilities.
-- User-level `%USERPROFILE%\\.agents\\0xsdlc\\sessions` contains generated task state, reports, prompts, and transcripts.
+- Project-local `<project-root>/.agents/0xSDLC/sessions` contains task state, reports, prompts, and transcripts. User-level `%USERPROFILE%\\.agents\\0xsdlc` contains shared runtime contracts and tools.
 
 ## Naming rules
 

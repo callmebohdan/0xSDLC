@@ -6,6 +6,7 @@ import argparse
 import os
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -77,20 +78,86 @@ def remove_published_path(path: Path, root: Path) -> None:
         path.unlink()
 
 
-def install_skills(source_root: Path, target: Path, force: bool, *, codex_metadata: bool = False) -> None:
-    target.mkdir(parents=True, exist_ok=True)
-    for name in SKILL_NAMES:
-        source = source_root / name
-        destination = target / name
-        if destination.exists() and not force:
-            raise FileExistsError(f"skill already exists: {destination}")
-        if force:
-            remove_published_path(destination, target)
-        shutil.copytree(source, destination)
-        if codex_metadata:
-            metadata = CODEX_METADATA_SOURCE / name
-            if metadata.is_dir():
-                shutil.copytree(metadata, destination / "agents", dirs_exist_ok=True)
+def _path_exists(path: Path) -> bool:
+    return path.exists() or path.is_symlink() or (hasattr(path, "is_junction") and path.is_junction())
+
+
+def preflight_install(runtime: Path, skill_targets: list[tuple[str, Path, bool]], upgrade: bool) -> list[Path]:
+    """Check all collisions and sources before changing any published destination."""
+    roots = [runtime, *(target for _, target, _ in skill_targets)]
+    for index, left in enumerate(roots):
+        if left == Path(left.anchor) or left == Path.home().resolve():
+            raise ValueError(f"refusing to use a filesystem root or home directory as an install destination: {left}")
+        if left == SOURCE or left.is_relative_to(SOURCE) or SOURCE.is_relative_to(left):
+            raise ValueError(f"install target overlaps the source checkout: {left}")
+        for right in roots[index + 1:]:
+            if left == right or left.is_relative_to(right) or right.is_relative_to(left):
+                raise ValueError(f"install destinations overlap: {left} and {right}")
+        if _path_exists(left) and not left.is_dir():
+            raise ValueError(f"install destination is not a directory: {left}")
+
+    if any((parent / ".git").exists() for parent in (runtime, *runtime.parents)):
+        raise ValueError(f"runtime destination must stay outside Git workspaces: {runtime}")
+    missing_sources = [relative for relative in PUBLISH_PATHS if not _path_exists(SOURCE / relative)]
+    missing_sources.extend(
+        f"support/integrations/portable-skills/{name}"
+        for name in SKILL_NAMES
+        if not (SKILLS_SOURCE / name).is_dir()
+    )
+    if missing_sources:
+        raise FileNotFoundError("installer source is incomplete: " + ", ".join(missing_sources))
+
+    if _path_exists(runtime) and any(runtime.iterdir()) and not upgrade:
+        raise FileExistsError(f"runtime destination is not empty (use --upgrade to replace managed paths): {runtime}")
+    if not upgrade:
+        conflicts = [
+            target / name
+            for _, target, _ in skill_targets
+            for name in SKILL_NAMES
+            if _path_exists(target / name)
+        ]
+        if conflicts:
+            raise FileExistsError("0xSDLC skill paths already exist (use --upgrade to replace them): " + ", ".join(str(path) for path in conflicts))
+    return roots
+
+
+def stage_copy(source: Path, destination: Path, root: Path, stage_roots: list[Path], operations: list[dict[str, Path]]) -> None:
+    stage_root = Path(tempfile.mkdtemp(prefix=".0xsdlc-stage-", dir=root))
+    stage_roots.append(stage_root)
+    staged = stage_root / "new"
+    if source.is_dir():
+        shutil.copytree(source, staged, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    else:
+        shutil.copy2(source, staged)
+    operations.append({"root": root, "destination": destination, "staged": staged, "backup": stage_root / "backup"})
+
+
+def apply_staged(operations: list[dict[str, Path]], stage_roots: list[Path]) -> None:
+    committed: list[dict[str, Path | bool]] = []
+    try:
+        for operation in operations:
+            destination = operation["destination"]
+            backup = operation["backup"]
+            had_destination = _path_exists(destination)
+            if had_destination:
+                os.replace(destination, backup)
+            try:
+                os.replace(operation["staged"], destination)
+            except OSError:
+                if had_destination:
+                    os.replace(backup, destination)
+                raise
+            committed.append({**operation, "had_destination": had_destination})
+    except OSError:
+        for operation in reversed(committed):
+            destination = operation["destination"]
+            remove_published_path(destination, operation["root"])
+            if operation["had_destination"]:
+                os.replace(operation["backup"], destination)
+        raise
+    finally:
+        for stage_root in stage_roots:
+            shutil.rmtree(stage_root, ignore_errors=True)
 
 
 def main() -> int:
@@ -123,46 +190,48 @@ def main() -> int:
         help="publish only the 0xSDLC runtime contracts",
     )
     parser.add_argument("--skip-provider-skills", action="store_true", help="publish contracts only; install no skill wrappers")
-    parser.add_argument("--force", action="store_true", help="replace existing harness files")
+    parser.add_argument(
+        "--upgrade", "--force", dest="force", action="store_true",
+        help="replace only published 0xSDLC paths and named skill folders; preserve sessions and sibling skills",
+    )
     args = parser.parse_args()
     target = args.agents_dir.expanduser().resolve()
-    target.mkdir(parents=True, exist_ok=True)
-    if any(target.iterdir()) and not args.force:
-        print("Install stopped; existing paths found:", file=sys.stderr)
-        print(f"- {target}", file=sys.stderr)
-        print("Re-run with --force only after reviewing those paths.", file=sys.stderr)
-        return 2
-    for relative in PUBLISH_PATHS:
-        source = SOURCE / relative
-        destination = target / relative
-        if args.force:
-            remove_published_path(destination, target)
-        if source.is_dir():
-            shutil.copytree(
-                source,
-                destination,
-                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
-            )
-        else:
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, destination)
-    print(f"Installed 0xSDLC into {target}")
+    skill_targets: list[tuple[str, Path, bool]] = []
     if not args.skip_provider_skills:
         codex_target = (args.skills_dir or args.codex_skills_dir).expanduser().resolve()
-        targets = [
+        skill_targets = [
             ("Claude Code", args.claude_skills_dir.expanduser().resolve(), False),
             ("Cursor", args.cursor_skills_dir.expanduser().resolve(), False),
             ("portable", args.portable_skills_dir.expanduser().resolve(), False),
         ]
         if not args.skip_codex_skills:
-            targets.insert(0, ("Codex", codex_target, True))
-        try:
-            for label, skills_target, metadata in targets:
-                install_skills(SKILLS_SOURCE, skills_target, args.force, codex_metadata=metadata)
-                print(f"Installed 0xSDLC skills for {label} into {skills_target}")
-        except FileExistsError as exc:
-            print(f"Install stopped; {exc}. Re-run with --force to replace it.", file=sys.stderr)
-            return 2
+            skill_targets.insert(0, ("Codex", codex_target, True))
+    stage_roots: list[Path] = []
+    try:
+        roots = preflight_install(target, skill_targets, args.force)
+        for root in roots:
+            root.mkdir(parents=True, exist_ok=True)
+        operations: list[dict[str, Path]] = []
+        for relative in PUBLISH_PATHS:
+            stage_copy(SOURCE / relative, target / relative, target, stage_roots, operations)
+        if not args.skip_provider_skills:
+            for label, skills_target, codex_metadata in skill_targets:
+                for name in SKILL_NAMES:
+                    destination = skills_target / name
+                    stage_copy(SKILLS_SOURCE / name, destination, skills_target, stage_roots, operations)
+                    if codex_metadata:
+                        metadata = CODEX_METADATA_SOURCE / name
+                        if metadata.is_dir():
+                            shutil.copytree(metadata, operations[-1]["staged"] / "agents", dirs_exist_ok=True)
+        apply_staged(operations, stage_roots)
+    except (FileExistsError, FileNotFoundError, OSError, ValueError) as exc:
+        for stage_root in stage_roots:
+            shutil.rmtree(stage_root, ignore_errors=True)
+        print(f"Install stopped: {exc}", file=sys.stderr)
+        return 2
+    print(f"Installed 0xSDLC into {target}")
+    for label, skills_target, _ in skill_targets:
+        print(f"Installed 0xSDLC skills for {label} into {skills_target}")
     return 0
 
 
