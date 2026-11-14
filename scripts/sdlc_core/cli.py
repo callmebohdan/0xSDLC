@@ -11,9 +11,17 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from .config import ALLOWED_TRANSITIONS, BASE_PHASES, PHASE_ARTIFACTS, ROUTE_SCHEMA_VERSION, library_path, sessions_root
+from .config import (
+    ALLOWED_TRANSITIONS,
+    BASE_PHASES,
+    PHASE_ARTIFACTS,
+    ROUTE_SCHEMA_VERSION,
+    library_path,
+    session_roots,
+    sessions_root,
+)
 from .native import close_phase, interrupt_phase, open_phase
-from .project import agents_draft, project_profile
+from .project import agents_draft, current_git_branch, project_profile
 from .prompts import prompt_for
 from .providers import select_model, validate_profiles
 from .routing import classify, infer_mode, migrate_route, needs_design, route_payload
@@ -42,7 +50,7 @@ def create_task(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], s
     workspace = args.workspace.expanduser().resolve()
     if not workspace.is_dir():
         raise ValueError(f"workspace is not a directory: {workspace}")
-    tasks = sessions_root(args.sessions_root)
+    tasks = sessions_root(args.sessions_root, workspace)
     check_session_writable(tasks)
     task_id = now_id(args.request)
     task_dir = tasks / task_id
@@ -66,6 +74,7 @@ def create_task(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any], s
         mode,
         args.quality_control,
     )
+    route["git_branch"] = current_git_branch(workspace)
     if args.native:
         route["execution"] = "native"
     if args.parallel_checks:
@@ -129,15 +138,19 @@ def cmd_autopilot(args: argparse.Namespace) -> int:
         return 5
 
 
-def resolve_task(value: str, override: Path | None = None) -> Path:
+def resolve_task(value: str, override: Path | None = None, workspace: Path | None = None) -> Path:
     candidate = Path(value).expanduser()
     if candidate.is_dir():
         return candidate.resolve()
-    root = sessions_root(override)
-    task_dir = root / value
-    if candidate.name != value or not (task_dir / "route.json").is_file():
-        raise ValueError(f"task {value!r} not found in {root}; use --sessions-root or pass the session directory")
-    return task_dir
+    roots = session_roots(override, workspace)
+    if candidate.name != value:
+        raise ValueError(f"task {value!r} not found; use --sessions-root or pass the session directory")
+    for root in roots:
+        task_dir = root / value
+        if (task_dir / "route.json").is_file():
+            return task_dir
+    searched = ", ".join(str(root) for root in roots)
+    raise ValueError(f"task {value!r} not found in {searched}; use --sessions-root or pass the session directory")
 
 
 def load_runnable_route(task_dir: Path) -> tuple[dict[str, Any], list[str]]:
@@ -155,7 +168,7 @@ def is_retrospective(route: dict[str, Any]) -> bool:
 
 def cmd_resume(args: argparse.Namespace) -> int:
     try:
-        task_dir = resolve_task(args.task, args.sessions_root)
+        task_dir = resolve_task(args.task, args.sessions_root, args.workspace or Path.cwd())
         check_session_writable(task_dir)
         with TaskLock(task_dir, stale_seconds=args.stale_lock_seconds):
             route, migrations = load_runnable_route(task_dir)
@@ -254,7 +267,7 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
             print("--adopt requires --approve with the human review decision.", file=sys.stderr)
             return 2
         try:
-            task_dir = resolve_task(args.adopt, args.sessions_root)
+            task_dir = resolve_task(args.adopt, args.sessions_root, args.workspace)
             with TaskLock(task_dir):
                 route, _ = load_runnable_route(task_dir)
                 workspace = Path(route["workspace"]).expanduser().resolve()
@@ -287,7 +300,7 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
         print(f"Refusing to overwrite existing {target}; prepare a draft for a reviewed manual update.", file=sys.stderr)
         return 2
     task_id = now_id(f"bootstrap-{workspace.name}")
-    root = sessions_root(args.sessions_root)
+    root = sessions_root(args.sessions_root, workspace)
     try:
         check_session_writable(root)
         task_dir = root / task_id
@@ -302,7 +315,8 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
     write_json(task_dir / "route.json", {
         "schema_version": ROUTE_SCHEMA_VERSION, "task_id": task_id, "request": "Bootstrap project AGENTS.md",
         "mode": "change",
-        "workspace": str(workspace), "classification": "standard", "model": "deterministic",
+        "workspace": str(workspace), "git_branch": current_git_branch(workspace),
+        "classification": "standard", "model": "deterministic",
         "status": "needs-approval" if not args.write else "completed", "current_phase": "approval" if not args.write else "verify",
         "phases": ["audit", "approval", "implement", "verify"],
         "phase_states": {
@@ -329,23 +343,27 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
 
 
 def cmd_status(args: argparse.Namespace) -> int:
-    tasks = sessions_root(args.sessions_root)
-    if not tasks.exists():
+    roots = session_roots(args.sessions_root, Path.cwd())
+    found = False
+    for tasks in roots:
+        if not tasks.exists():
+            continue
+        found = True
+        for route_path in sorted(tasks.glob("*/route.json"), reverse=True):
+            try:
+                route = read_json(route_path)
+                status = "retrospective" if is_retrospective(route) else route.get("status", "invalid")
+                print(f"{route.get('task_id', route_path.parent.name)} | {status} | {route.get('classification', '-')} | {route.get('current_phase', '-')} | {route_path.parent}")
+            except (OSError, json.JSONDecodeError):
+                print(f"{route_path.parent.name} | invalid route.json | {route_path.parent}")
+    if not found:
         print("No 0xSDLC tasks yet.")
-        return 0
-    for route_path in sorted(tasks.glob("*/route.json"), reverse=True):
-        try:
-            route = read_json(route_path)
-            status = "retrospective" if is_retrospective(route) else route.get("status", "invalid")
-            print(f"{route.get('task_id', route_path.parent.name)} | {status} | {route.get('classification', '-')} | {route.get('current_phase', '-')}")
-        except (OSError, json.JSONDecodeError):
-            print(f"{route_path.parent.name} | invalid route.json")
     return 0
 
 
 def cmd_native(args: argparse.Namespace) -> int:
     try:
-        task_dir = resolve_task(args.task, args.sessions_root)
+        task_dir = resolve_task(args.task, args.sessions_root, Path.cwd())
         check_session_writable(task_dir)
         with TaskLock(task_dir):
             route, _ = load_runnable_route(task_dir)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,22 @@ STYLE_FILES = (
     "CONTRIBUTING.rst", "pyproject.toml", "ruff.toml", "eslint.config.js", "eslint.config.mjs",
 )
 IGNORED_SCAN_DIRS = {".git", ".agents", ".venv", "venv", "node_modules", "vendor", "build", "dist", "out"}
+
+
+def current_git_branch(workspace: Path) -> str | None:
+    """Return the checked-out branch name, or None outside a named Git branch."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(workspace), "branch", "--show-current"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=3,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    branch = result.stdout.strip()
+    return branch if result.returncode == 0 and branch else None
 
 
 def detect_languages(workspace: Path, limit: int = 1000) -> dict[str, int]:

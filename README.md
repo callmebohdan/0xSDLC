@@ -119,13 +119,13 @@ It is not yet a full L3/L4 platform. The runner already has versioned route and 
 
 `AGENTS.md` remains at the repository root as the project-level instruction file.
 
-Source contracts are versioned in this repository. Provider integrations consume the published model-neutral contracts, while generated task state and evidence live outside the repository in a user-level agent session directory.
+Source contracts are versioned in this repository. Provider integrations consume the published model-neutral contracts. The installed runtime library lives in the user-level agent directory, while task state, reports, call telemetry, and recovery evidence live with the project:
 
 ```text
-%USERPROFILE%\\.agents\\0xsdlc\\sessions\\YYYY-MM-DD_short-description_XXXXXXXX\\
+<repository>\\.agents\\0xSDLC\\sessions\\YYYY-MM-DD_short-description_XXXXXXXX\\
 ```
 
-This keeps runtime artifacts, transcripts, and potentially sensitive task details out of Git.
+This keeps each project's evidence together and Git-ignored, without mixing it with the shared runtime library. For workspaces outside a Git repository, 0xSDLC uses the workspace directory as the project root. Existing sessions in `%USERPROFILE%\\.agents\\0xsdlc\\sessions` remain discoverable by task ID as a legacy location.
 
 ## Install and use
 

@@ -22,7 +22,7 @@ Fold intake into `specify`: the brief is captured deterministically and the spec
 
 ## Task state
 
-1. Resolve the session root through `--sessions-root`, `0XSDLC_SESSIONS_ROOT`, then the existing user-level default. Keep a repository-local root Git-ignored. The runner checks create and atomic replace before execution. See [session output](../docs/session-output.md).
+1. Resolve the session root through `--sessions-root`, `0XSDLC_SESSIONS_ROOT`, then `<project-root>/.agents/0xSDLC/sessions`. Keep runtime evidence Git-ignored. The runner checks create and atomic replace before execution. See [session output](../docs/session-output.md).
 2. Persist the verbatim request in `brief.md` and route, rationale, phase state, approvals, attempts, and events in `route.json` before any adapter call.
 3. Each phase writes the requested Markdown artifact with `task_id`, `phase`, and controlled `status` front matter. A missing or invalid artifact blocks the route.
 4. State transitions are recorded atomically. Phase states are `pending`, `running`, `succeeded`, `failed`, `blocked`, `needs-approval`, `needs-review`, and `skipped`.

@@ -69,8 +69,38 @@ def library_path(relative: str) -> Path:
     return installed if installed.exists() else HARNESS_ROOT / relative
 
 
-def sessions_root(override: Path | None = None) -> Path:
+def project_root(workspace: Path | None = None) -> Path:
+    """Find the Git repository root, or use the supplied workspace as the project root."""
+    location = (workspace or Path.cwd()).expanduser().resolve()
+    if not location.is_dir():
+        location = location.parent
+    for candidate in (location, *location.parents):
+        if (candidate / ".git").exists():
+            return candidate
+    return location
+
+
+def legacy_sessions_root() -> Path:
+    """Return the user-level session directory used before project-local storage."""
+    return system_library() / "sessions"
+
+
+def sessions_root(override: Path | None = None, workspace: Path | None = None) -> Path:
     configured = os.environ.get("0XSDLC_SESSIONS_ROOT")
     if override is not None or configured:
         return Path(override if override is not None else configured).expanduser().resolve()
-    return system_library() / "sessions"
+    return project_root(workspace) / ".agents" / "0xSDLC" / "sessions"
+
+
+def session_roots(override: Path | None = None, workspace: Path | None = None) -> list[Path]:
+    """Return the selected root and legacy roots for default lookup."""
+    selected = sessions_root(override, workspace)
+    if override is not None or os.environ.get("0XSDLC_SESSIONS_ROOT"):
+        return [selected]
+    project = project_root(workspace)
+    legacy_roots = [(project / ".agents" / "0xsdlc" / "sessions").resolve()]
+    logs = project / "logs"
+    if logs.is_dir():
+        legacy_roots.extend(path.resolve() for path in logs.iterdir() if path.is_dir())
+    legacy_roots.append(legacy_sessions_root().resolve())
+    return list(dict.fromkeys([selected, *legacy_roots]))

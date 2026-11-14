@@ -427,7 +427,7 @@ FodyWeavers.xsd
 *.msix
 *.msm
 
-# 0xSDLC local task artifacts and adapter transcripts
+# 0xSDLC per-project task artifacts and adapter transcripts
 sessions/
 .agents/
 *.stdout.txt
@@ -465,8 +465,7 @@ build/
 dist/
 *.egg-info/
 
-# 0xSDLC runtime state belongs in the user-level agent directory.
-.agents/
+# Runtime task state is ignored by the project-local .agents/ rule above.
 .0xsdlc.lock
 
 # Local editor and operating-system metadata.

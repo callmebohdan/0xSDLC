@@ -1,6 +1,8 @@
 # Sessions and output
 
-Session storage uses `--sessions-root`, then `0XSDLC_SESSIONS_ROOT`, then the existing default (`<0XSDLC_AGENTS_HOME>/sessions` if set, otherwise `~/.agents/0xsdlc/sessions`). Relative overrides resolve from the current directory. Contracts, templates, and provider profiles still resolve from the runtime library.
+Session storage uses `--sessions-root`, then `0XSDLC_SESSIONS_ROOT`, then `<project-root>/.agents/0xSDLC/sessions`. The project root is the Git root containing the workspace; outside a Git repository, it is the workspace directory. Relative overrides resolve from the current directory. Contracts, templates, and provider profiles still resolve from the user-level runtime library (`~/.agents/0xsdlc` by default), which is separate from project sessions.
+
+When a task ID is used without an explicit session-root override, lookup checks the current project's session directory first, the previous lowercase project path `.agents/0xsdlc/sessions`, existing project-specific directories directly under `logs/`, and the legacy user-level session directory last (`<0XSDLC_AGENTS_HOME>/sessions` if configured, otherwise `~/.agents/0xsdlc/sessions`). This keeps older tasks discoverable. `status` lists these locations. Pass `--sessions-root` or the full task directory when resuming a task from another project. New tasks always use the project-local default unless an override is set.
 
 Pass the same override to `autopilot`, `resume`, `status`, `bootstrap`, or `native` when using a task ID. `resume`, `native`, and `bootstrap --adopt` also accept the full task directory. The runner checks that it can create and atomically replace files before executing. In a restricted workspace, select a writable directory and verify that Git ignores it before storing private evidence.
 
@@ -20,14 +22,16 @@ Pass the same override to `autopilot`, `resume`, `status`, `bootstrap`, or `nati
 
 Keep one task's evidence together. Never overwrite a failed report to make the task appear green. Redact secrets and private data from artifacts before sharing them. The eight-character suffix prevents collisions while keeping paths readable.
 
+Task IDs use `YYYY-MM-DD_<task-slug>_<8-hex-id>` and do not encode the branch. `route.json` stores the originating branch in the optional `git_branch` field; it is `null` when no named Git branch is available.
+
 The runner uses an OS lock on the persistent `.0xsdlc.guard` file. It releases when the owning process exits. On upgrade, finish any run started by the previous runtime before reopening its session. `resume --stale-lock-seconds` sets the minimum age for recovery of a legacy `.0xsdlc.lock` whose local owner has exited.
 
 ## Native chat
 
-Use the local Python runner from the repo or installed runtime. The following examples assume `logs/0xsdlc` is already Git-ignored in the current repo.
+Use the local Python runner from the repo or installed runtime. The default session directory is already covered by the repository's `.agents/` ignore rule.
 
 ```text
-python scripts/0xSDLC.py autopilot "<request>" --native --sessions-root logs/0xsdlc
+python scripts/0xSDLC.py autopilot "<request>" --native
 python scripts/0xSDLC.py native open "<task-directory>" <phase>
 python scripts/0xSDLC.py native close "<task-directory>" <attempt-id> --outcome succeeded
 ```

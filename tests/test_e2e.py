@@ -51,7 +51,7 @@ class EndToEndTests(unittest.TestCase):
         self.assertIn("usage: 0xSDLC", result.stdout)
 
     def latest_task(self) -> Path:
-        tasks = list((Path(self.env["0XSDLC_AGENTS_HOME"]) / "sessions").iterdir())
+        tasks = list((self.workspace / ".agents" / "0xSDLC" / "sessions").iterdir())
         self.assertTrue(tasks)
         return max(tasks, key=lambda path: path.stat().st_mtime_ns)
 
@@ -116,6 +116,61 @@ class EndToEndTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(self.route(task)["status"], "completed")
         self.assertFalse((contracts.parent / "sessions").exists())
+
+    def test_project_local_default_and_legacy_task_lookup(self) -> None:
+        result = self.run_cli("autopilot", "fix project label", "--model", "generic")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        task = self.latest_task()
+        self.assertEqual(task.parent, self.workspace / ".agents" / "0xSDLC" / "sessions")
+        self.assertIsNone(self.route(task)["git_branch"])
+        self.assertIn(task.name, self.run_cli("status").stdout)
+
+        legacy_root = Path(self.env["0XSDLC_AGENTS_HOME"]) / "sessions"
+        legacy_root.mkdir(parents=True)
+        legacy_task = legacy_root / task.name
+        task.rename(legacy_task)
+        self.assertIn(task.name, self.run_cli("status").stdout)
+        result = self.run_cli("resume", task.name)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(str(legacy_task).casefold(), result.stdout.casefold())
+
+    def test_branch_is_recorded_separately_from_task_id(self) -> None:
+        subprocess.run(
+            ["git", "init", "--quiet", "-b", "feature/session-metadata", str(self.workspace)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        result = self.run_cli("autopilot", "fix branch metadata", "--model", "generic")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        task = self.latest_task()
+        route = self.route(task)
+        self.assertEqual(route["git_branch"], "feature/session-metadata")
+        self.assertRegex(task.name, r"^\d{4}-\d{2}-\d{2}_fix-branch-metadata_[a-f0-9]{8}$")
+        self.assertNotIn("feature", task.name)
+
+    def test_nested_workspace_uses_repository_root_for_sessions(self) -> None:
+        nested = self.workspace / "packages" / "app"
+        nested.mkdir(parents=True)
+        (self.workspace / ".git").mkdir()
+        result = self.run_cli("autopilot", "fix nested label", "--model", "generic", "--workspace", str(nested))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        task = self.latest_task()
+        self.assertEqual(task.parent, self.workspace / ".agents" / "0xSDLC" / "sessions")
+
+    def test_legacy_project_logs_task_lookup(self) -> None:
+        result = self.run_cli("autopilot", "fix legacy log task", "--model", "generic")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        task = self.latest_task()
+        legacy_root = self.workspace / "logs" / "legacy-project"
+        legacy_root.mkdir(parents=True)
+        legacy_task = legacy_root / task.name
+        task.rename(legacy_task)
+
+        self.assertIn(task.name, self.run_cli("status").stdout)
+        result = self.run_cli("resume", task.name)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(str(legacy_task).casefold(), result.stdout.casefold())
 
     def test_unwritable_session_root_fails_before_adapter(self) -> None:
         blocked = self.base / "file instead of directory"

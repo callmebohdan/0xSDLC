@@ -22,7 +22,7 @@ Do not load every phase into every prompt. The active phase owns the current act
 python scripts\0xSDLC.py autopilot "Describe one bounded task"
 ```
 
-Inspect the generated route and first prompt under `%USERPROFILE%\\.agents\\0xsdlc\\sessions\\<task-id>\\`. Use `--execute` only after the adapter and permissions are understood.
+Inspect the generated route and first prompt under `<repository>\\.agents\\0xSDLC\\sessions\\<task-id>\\`. Use `--execute` only after the adapter and permissions are understood.
 
 Use `--parallel-checks` only with `--full` when independent audit and review lanes add meaningful confidence. It doubles those model calls and is disabled by default.
 
