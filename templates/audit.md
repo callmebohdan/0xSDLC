@@ -35,7 +35,7 @@ route_reason: ""
 
 ## Environment capabilities relevant to acceptance criteria
 
-| Capability | Required by criterion? | Availability | Probe/command | Exact error or limitation |
+| Capability | Required by criterion? | Availability | Probe/command | Duration/limit | Exact error or limitation |
 | --- | --- | --- | --- | --- |
 | Build/test executables | | | | |
 | Writable temporary directory | | | | |
@@ -54,7 +54,7 @@ Use `available`, `unavailable`, `invalid`, `not-probed`, or `not-required`. Init
 
 ## Existing commands and baseline
 
-| Purpose | Command | Working directory | Exit code | Result / limitation |
+| Purpose | Command | Working directory | Exit code | Duration/limit | Result / limitation |
 | --- | --- | --- | ---: | --- |
 | Install | | | | |
 | Build/type-check | | | | |
