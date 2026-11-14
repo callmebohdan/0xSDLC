@@ -25,7 +25,7 @@ Maintain 0xSDLC as a lightweight, model-neutral, spec-driven coding harness. Opt
 - Root `0xSDLC-*` folders: autopilot and frequently invoked phase contracts.
 - `support/`: provider contracts, less-frequent phase agents, adapters, MCP boundaries, and shared rules.
 - `scripts/`: small, dependency-free Python utilities.
-- `.agents/0xsdlc/sessions/`: generated local artifacts; do not treat them as source code.
+- `<project-root>/.agents/0xSDLC/sessions/`: generated project-local task artifacts; do not treat them as source code. The shared runtime library lives separately under the user-level `.agents/0xsdlc/` directory.
 
 ## Engineering standards
 

@@ -32,4 +32,4 @@ Do not pretend that an interactive Cursor session is equivalent to a determinist
 
 ## Handoff
 
-Export or record the resulting diff, commands, test output, and phase artifact under `.agents/0xsdlc/sessions/<task-id>/`. If the interactive session cannot provide reproducible evidence, mark the phase `needs-review` rather than `verified`.
+Export or record the resulting diff, commands, test output, and phase artifact under `<project-root>/.agents/0xSDLC/sessions/<task-id>/`. If the interactive session cannot provide reproducible evidence, mark the phase `needs-review` rather than `verified`.

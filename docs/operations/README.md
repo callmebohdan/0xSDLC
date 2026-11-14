@@ -4,7 +4,7 @@ This folder explains how to load and execute the root-level 0xSDLC subagents.
 
 ## Loading order
 
-1. Root `AGENTS.md`.
+1. Project root `AGENTS.md`, followed by the nearest nested `AGENTS.md` files relevant to the active files.
 2. `support/conventions/phase-protocol.md`.
 3. `support/conventions/boundaries.md`.
 4. `support/conventions/output-contract.md`.
