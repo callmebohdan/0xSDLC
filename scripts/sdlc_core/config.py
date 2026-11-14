@@ -89,7 +89,7 @@ def sessions_root(override: Path | None = None, workspace: Path | None = None) -
     configured = os.environ.get("0XSDLC_SESSIONS_ROOT")
     if override is not None or configured:
         return Path(override if override is not None else configured).expanduser().resolve()
-    return project_root(workspace) / ".agents" / "0xsdlc" / "sessions"
+    return project_root(workspace) / ".agents" / "0xSDLC" / "sessions"
 
 
 def session_roots(override: Path | None = None, workspace: Path | None = None) -> list[Path]:
@@ -98,7 +98,7 @@ def session_roots(override: Path | None = None, workspace: Path | None = None) -
     if override is not None or os.environ.get("0XSDLC_SESSIONS_ROOT"):
         return [selected]
     project = project_root(workspace)
-    legacy_roots = []
+    legacy_roots = [(project / ".agents" / "0xsdlc" / "sessions").resolve()]
     logs = project / "logs"
     if logs.is_dir():
         legacy_roots.extend(path.resolve() for path in logs.iterdir() if path.is_dir())

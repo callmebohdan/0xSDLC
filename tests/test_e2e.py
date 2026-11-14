@@ -51,7 +51,7 @@ class EndToEndTests(unittest.TestCase):
         self.assertIn("usage: 0xSDLC", result.stdout)
 
     def latest_task(self) -> Path:
-        tasks = list((self.workspace / ".agents" / "0xsdlc" / "sessions").iterdir())
+        tasks = list((self.workspace / ".agents" / "0xSDLC" / "sessions").iterdir())
         self.assertTrue(tasks)
         return max(tasks, key=lambda path: path.stat().st_mtime_ns)
 
@@ -121,7 +121,7 @@ class EndToEndTests(unittest.TestCase):
         result = self.run_cli("autopilot", "fix project label", "--model", "generic")
         self.assertEqual(result.returncode, 0, result.stderr)
         task = self.latest_task()
-        self.assertEqual(task.parent, self.workspace / ".agents" / "0xsdlc" / "sessions")
+        self.assertEqual(task.parent, self.workspace / ".agents" / "0xSDLC" / "sessions")
         self.assertIn(task.name, self.run_cli("status").stdout)
 
         legacy_root = Path(self.env["0XSDLC_AGENTS_HOME"]) / "sessions"
@@ -140,7 +140,7 @@ class EndToEndTests(unittest.TestCase):
         result = self.run_cli("autopilot", "fix nested label", "--model", "generic", "--workspace", str(nested))
         self.assertEqual(result.returncode, 0, result.stderr)
         task = self.latest_task()
-        self.assertEqual(task.parent, self.workspace / ".agents" / "0xsdlc" / "sessions")
+        self.assertEqual(task.parent, self.workspace / ".agents" / "0xSDLC" / "sessions")
 
     def test_legacy_project_logs_task_lookup(self) -> None:
         result = self.run_cli("autopilot", "fix legacy log task", "--model", "generic")
