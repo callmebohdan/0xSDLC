@@ -203,12 +203,20 @@ def _command_availability(commands: dict[str, str]) -> list[dict[str, Any]]:
     return checks
 
 
+def _probe_temporary_directory() -> dict[str, Any]:
+    """Report lookup or write failures as readiness evidence, not setup errors."""
+    try:
+        temp_path = Path(tempfile.gettempdir())
+    except OSError as exc:
+        return {"status": "unavailable", "path": None, "error": f"{type(exc).__name__}: {exc}"}
+    return _probe_writable_directory(temp_path)
+
+
 def _environment_profile(commands: dict[str, str]) -> dict[str, Any]:
-    temp_path = Path(tempfile.gettempdir())
     return {
         "platform": sys.platform,
         "python": sys.version.split()[0],
-        "temporary_directory": _probe_writable_directory(temp_path),
+        "temporary_directory": _probe_temporary_directory(),
         "commands": _command_availability(commands),
         "browser_screenshot": {
             "status": "not-probed",
@@ -293,6 +301,7 @@ def readiness_report(profile: dict[str, Any]) -> str:
     temp_probe = environment.get("temporary_directory", {})
     temp_error = temp_probe.get("error")
     temp_error_text = f" - {temp_error}" if temp_error else ""
+    temp_path_label = temp_probe.get("path") or "unavailable"
     command_checks = environment.get("commands", [])
     executable_checks = "\n".join(
         f"- `{item['purpose']}` (`{item['command']}`): executable `{item['executable']}` is {item['status']}"
@@ -328,7 +337,7 @@ CI commands are read from configuration and are not executed by `init`.
 ## Local execution capabilities
 
 - Platform: `{environment.get('platform', 'unknown')}`; Python: `{environment.get('python', 'unknown')}`.
-- Temporary directory: `{temp_probe.get('path', 'unknown')}` is `{temp_probe.get('status', 'not-probed')}`{temp_error_text}.
+- Temporary directory: `{temp_path_label}` is `{temp_probe.get('status', 'not-probed')}`{temp_error_text}.
 - Configured command executables (availability only; commands are not run):
 {executable_checks}
 - Browser/screenshot access: `{browser.get('status', 'not-probed')}` - {browser.get('reason', 'probe at task time if visual evidence is required')}.
