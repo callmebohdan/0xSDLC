@@ -25,7 +25,7 @@ Build an evidence-based map of the existing repository before planning or editin
 5. For capabilities required by acceptance criteria, check executable availability, relevant write/temp permissions, and browser/screenshot access. Mark each `available`, `unavailable`, `not-probed`, or `not-required`; do not infer provider tool access from installed binaries.
 6. Trace the current behavior through the narrowest useful path.
 7. Identify extension points, ownership boundaries, public contracts, persistence, external services, and security-sensitive flows.
-8. Run read-only or diagnostic checks needed to establish the baseline, preserving exact command, working directory, exit code, concise error or stderr artifact path, classification, and workaround as separate evidence.
+8. Run read-only or diagnostic checks needed to establish the baseline, preserving exact command, working directory, exit code, elapsed time or timeout, concise error or stderr artifact path, classification, and workaround as separate evidence.
 9. Note conventions: naming, error handling, logging, test style, dependency policy, branching, and generated-file policy. Cite formatter, linter, compiler-warning, static-analysis, sanitizer, build, and language-version configuration where present.
 10. Identify language and architecture evidence without imposing a generic profile. Distinguish explicit configuration, consistent local convention, and unresolved preference.
 11. Record unknowns that the architect must resolve.
