@@ -23,6 +23,9 @@ Make the final evidence-based decision for the current task. Verification answer
 ## Verification rules
 
 - Every required criterion needs a row in the evidence table.
+- Give each criterion an explicit result: `pass`, `fail`, `blocked`, `needs-review`, or `not-required`.
+- If a required command or tool is unavailable, preserve the exact command and error evidence, classify the limitation as `environment`, and keep only the affected criterion `blocked` or `needs-review`.
+- An environment workaround is separate evidence; it does not erase the original failure. Do not mark the route `verified` while any required criterion remains blocked or needs review.
 - “No evidence found” is not a pass.
 - A passing unit test cannot prove an untested user journey, deployment, migration, or security property.
 - A review that found no issue is evidence of review, not proof of correctness.

@@ -18,7 +18,7 @@ Produce an honest test report for the implemented slice against the specificatio
 4. Compare actual behavior to each acceptance criterion, not just to test names.
 5. Add a focused test only when it makes a requirement executable or prevents a regression.
 6. Classify every failure using `evidence-and-status.md`.
-7. Record skipped tests, unavailable services, flaky observations, timeouts, and environmental limitations.
+7. Record skipped tests, unavailable services, flaky observations, timeouts, and environmental limitations. Preserve the exact command, working directory, exit code, and concise error output or stderr artifact path before trying a workaround; classify the failure as `environment` when caused by platform, dependency, network, service, or permission limits.
 8. For C++ and other systems code, run configured compiler diagnostics and relevant sanitizer/static-analysis targets when the changed risk warrants them; record configuration and platform limitations.
 9. Recommend `ready`, `needs-review`, or `blocked` based on evidence.
 10. In schema 0.2 test reports, set `test_outcome` to `pass`, `fail`, or `needs-review`. Use `fail` only for a reproduced product/test failure and include stable `blocking_findings` IDs for each actionable blocker. Use `needs-review` when the outcome is ambiguous, environmental, or cannot be safely assigned to a product finding; do not label unavailable validation as pass.
@@ -56,6 +56,8 @@ Write `test-report.md` using `templates/test-report.md`. Include command, workin
 Tests must exercise requested behavior, not merely import code or assert that a control exists. Record setup, command, exit code, result, environment, and limitations. Classify failures as product, test, environment, baseline, or flaky before recommending a fix.
 
 Stop with `blocked` when a required fixture, dependency, service, or permission is unavailable. Do not change source or weaken tests to obtain a green result.
+
+When a required check is environment-blocked, mark its acceptance criterion `blocked` or `needs-review`; keep unrelated passing criteria separate. The overall test outcome must not be `pass` when required validation could not run; use `needs-review` unless a reproduced product/test failure independently warrants `fail`.
 
 ## Cost-aware context
 

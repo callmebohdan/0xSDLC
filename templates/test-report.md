@@ -34,6 +34,8 @@ assumptions: []
 | Criterion | Scenario/input | Expected | Actual | Evidence | Result |
 | --- | --- | --- | --- | --- | --- |
 
+Use `pass`, `fail`, `blocked`, `needs-review`, or `not-required`. If a required check cannot run because a command, permission, service, or tool is unavailable, do not mark the affected criterion as passing.
+
 ## Edge and negative cases
 
 | Case | Expected | Actual | Evidence | Result |
@@ -41,8 +43,10 @@ assumptions: []
 
 ## Failures and classification
 
-| Failure | Classification | Reproduction | Impact | Owner/next action |
-| --- | --- | --- | --- | --- |
+| Failure | Classification | Exact command / working directory / exit code | Exact error excerpt or stderr artifact path | Impact | Owner/next action |
+| --- | --- | --- | --- | --- | --- |
+
+Preserve the original command and concise error output (or a path to the complete stderr artifact) before trying a workaround. Classify platform, dependency, network, service, and permission failures as `environment`; record the workaround and rerun as separate evidence. Redact secrets and personal data, not diagnostic details needed to reproduce the failure.
 
 ## Coverage gaps and limitations
 

@@ -21,13 +21,14 @@ Inspect README files, package/build manifests, lock files, CI configuration, tes
 1. Record repository root, branch, existing changes, detected ecosystems, and evidence files.
 2. Inspect existing `AGENTS.md` for usable project-specific commands, verification guidance, CI references, style rules, and unresolved placeholders. Treat this as a heuristic readiness check; report its findings and evidence.
 3. Inspect package/build manifests, Make targets, test configuration, CI workflows, test directories, and formatter/linter settings. Extract exact build, test, lint, format, and development commands where repository configuration supports them. Mark inferred or unexecuted commands as unverified.
-4. Describe source, test, documentation, generated, vendored, and sensitive locations.
-5. Detect languages and capture style and architecture only where code/config consistently supports it. Separate formatter/linter/compiler settings from inferred local habits.
-6. Capture Git/PR rules only from explicit project documentation or configuration.
-7. Add always/ask/never boundaries, including secrets and external side effects.
-8. List unresolved information rather than filling it with generic assumptions.
-9. Write `readiness.md` and `project-profile.json` in the task session. If `AGENTS.md` is missing or inadequate, write `agents-draft.md`; preserve existing instructions and append evidence-backed setup guidance for an inadequate file. A human reviews before adoption.
-10. When no explicit engineering standard exists, list the unresolved choice and optionally recommend the applicable 0xSDLC language profile as a starting point; do not present it as adopted policy.
+4. Review the environment snapshot in `project-profile.json` and the readiness report. Distinguish an executable found on `PATH` from a command that was run successfully; report the temporary-directory write probe and its exact error when unavailable. Local init cannot inspect provider-hosted browser or screenshot tools, so mark them `not-probed` for task-time audit when a criterion requires visual evidence.
+5. Describe source, test, documentation, generated, vendored, and sensitive locations.
+6. Detect languages and capture style and architecture only where code/config consistently supports it. Separate formatter/linter/compiler settings from inferred local habits.
+7. Capture Git/PR rules only from explicit project documentation or configuration.
+8. Add always/ask/never boundaries, including secrets and external side effects.
+9. List unresolved information rather than filling it with generic assumptions.
+10. Write `readiness.md` and `project-profile.json` in the task session. If `AGENTS.md` is missing or inadequate, write `agents-draft.md`; preserve existing instructions and append evidence-backed setup guidance for an inadequate file. A human reviews before adoption.
+11. When no explicit engineering standard exists, list the unresolved choice and optionally recommend the applicable 0xSDLC language profile as a starting point; do not present it as adopted policy.
 
 ## Guardrails
 

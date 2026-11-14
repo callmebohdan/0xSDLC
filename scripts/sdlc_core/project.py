@@ -6,7 +6,11 @@ import hashlib
 import json
 import os
 import re
+import shlex
+import shutil
 import subprocess
+import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -168,6 +172,59 @@ def assess_agents(existing: str | None, profile: dict[str, Any], source_hash: st
     }
 
 
+def _probe_writable_directory(directory: Path) -> dict[str, Any]:
+    """Probe the active temporary directory without leaving a file behind."""
+    try:
+        with tempfile.NamedTemporaryFile(prefix=".0xsdlc-init-probe-", dir=directory, delete=True):
+            pass
+    except OSError as exc:
+        return {"status": "unavailable", "path": str(directory), "error": f"{type(exc).__name__}: {exc}"}
+    return {"status": "available", "path": str(directory), "error": None}
+
+
+def _command_availability(commands: dict[str, str]) -> list[dict[str, Any]]:
+    checks = []
+    for purpose, command in commands.items():
+        try:
+            parts = shlex.split(command, posix=os.name != "nt")
+        except ValueError as exc:
+            checks.append({
+                "purpose": purpose, "command": command, "executable": None, "path": None,
+                "status": "invalid", "error": f"{type(exc).__name__}: {exc}",
+            })
+            continue
+        executable = parts[0].strip("\"'") if parts else ""
+        resolved = shutil.which(executable) if executable else None
+        checks.append({
+            "purpose": purpose, "command": command, "executable": executable or None,
+            "path": resolved, "status": "available" if resolved else "unavailable",
+            "error": None if resolved else f"{executable or 'command'} was not found on PATH",
+        })
+    return checks
+
+
+def _probe_temporary_directory() -> dict[str, Any]:
+    """Report lookup or write failures as readiness evidence, not setup errors."""
+    try:
+        temp_path = Path(tempfile.gettempdir())
+    except OSError as exc:
+        return {"status": "unavailable", "path": None, "error": f"{type(exc).__name__}: {exc}"}
+    return _probe_writable_directory(temp_path)
+
+
+def _environment_profile(commands: dict[str, str]) -> dict[str, Any]:
+    return {
+        "platform": sys.platform,
+        "python": sys.version.split()[0],
+        "temporary_directory": _probe_temporary_directory(),
+        "commands": _command_availability(commands),
+        "browser_screenshot": {
+            "status": "not-probed",
+            "reason": "init cannot inspect provider-hosted browser or screenshot tools; probe them during audit when an acceptance criterion requires visual evidence.",
+        },
+    }
+
+
 def project_profile(workspace: Path) -> dict[str, Any]:
     readme = next((path for path in (workspace / "README.md", workspace / "README.rst", workspace / "README.txt") if path.is_file()), None)
     summary = "No README summary found."
@@ -224,6 +281,7 @@ def project_profile(workspace: Path) -> dict[str, Any]:
         "languages": languages, "style_files": style_files,
         "top_level": top_level, "commands": commands, "test_paths": test_paths,
         "ci_workflows": ci_workflows,
+        "environment": _environment_profile(commands),
         "sources": list(dict.fromkeys(sources)),
     }
     agents_path = workspace / "AGENTS.md"
@@ -239,6 +297,18 @@ def project_profile(workspace: Path) -> dict[str, Any]:
 def readiness_report(profile: dict[str, Any]) -> str:
     agents = profile["agents"]
     commands = "\n".join(f"- `{name}`: `{command}` (detected from configuration; not run by init)" for name, command in profile["commands"].items()) or "- No build or test command was established from repository configuration."
+    environment = profile.get("environment", {})
+    temp_probe = environment.get("temporary_directory", {})
+    temp_error = temp_probe.get("error")
+    temp_error_text = f" - {temp_error}" if temp_error else ""
+    temp_path_label = temp_probe.get("path") or "unavailable"
+    command_checks = environment.get("commands", [])
+    executable_checks = "\n".join(
+        f"- `{item['purpose']}` (`{item['command']}`): executable `{item['executable']}` is {item['status']}"
+        + (f" at `{item['path']}`" if item.get("path") else f" ({item.get('error')})")
+        for item in command_checks
+    ) or "- No configured build/test/lint command executables to check."
+    browser = environment.get("browser_screenshot", {})
     workflows = "\n".join(
         f"- `{item['path']}`" + (f" (jobs: {', '.join(item['jobs'])})" if item["jobs"] else "")
         for item in profile["ci_workflows"]
@@ -263,6 +333,16 @@ Test locations: {tests}.
 {workflows}
 
 CI commands are read from configuration and are not executed by `init`.
+
+## Local execution capabilities
+
+- Platform: `{environment.get('platform', 'unknown')}`; Python: `{environment.get('python', 'unknown')}`.
+- Temporary directory: `{temp_path_label}` is `{temp_probe.get('status', 'not-probed')}`{temp_error_text}.
+- Configured command executables (availability only; commands are not run):
+{executable_checks}
+- Browser/screenshot access: `{browser.get('status', 'not-probed')}` - {browser.get('reason', 'probe at task time if visual evidence is required')}.
+
+These checks do not prove that build/test commands succeed or that provider-hosted tools are usable. Task audit must probe capabilities required by acceptance criteria and record the result.
 
 ## Instruction-file findings
 

@@ -38,6 +38,8 @@ Use `blocked` when the phase cannot be completed safely or honestly because a re
 
 Use `verified` only in `verification.md`, after every required acceptance criterion has a current evidence entry and no unresolved blocker remains. Passing tests alone does not imply `verified`.
 
+Assess each acceptance criterion separately. If an environment limitation prevents required evidence, mark that criterion `blocked` or `needs-review`; a failure in one criterion does not erase evidence that other criteria passed. The overall task cannot be `verified` while any required criterion remains blocked or needs review.
+
 Artifact status, phase-state status, and route status are separate vocabularies. `needs-approval` means the explicit approval gate is waiting; `needs-review` means human judgment or resolution is required. Never map one to the other. A `failed` phase state records an execution/test outcome; `blocked` means the route cannot safely continue without intervention.
 
 ## Failure classification
