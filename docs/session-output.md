@@ -1,6 +1,8 @@
 # Sessions and output
 
-Session storage uses `--sessions-root`, then `0XSDLC_SESSIONS_ROOT`, then the existing default (`<0XSDLC_AGENTS_HOME>/sessions` if set, otherwise `~/.agents/0xsdlc/sessions`). Relative overrides resolve from the current directory. Contracts, templates, and provider profiles still resolve from the runtime library.
+Session storage uses `--sessions-root`, then `0XSDLC_SESSIONS_ROOT`, then `<project-root>/.agents/0xsdlc/sessions`. The project root is the Git root containing the workspace; outside a Git repository, it is the workspace directory. Relative overrides resolve from the current directory. Contracts, templates, and provider profiles still resolve from the user-level runtime library (`~/.agents/0xsdlc` by default), which is separate from project sessions.
+
+When a task ID is used without an explicit session-root override, lookup checks the current project's session directory first and the legacy user-level session directory second (`<0XSDLC_AGENTS_HOME>/sessions` if configured, otherwise `~/.agents/0xsdlc/sessions`). `status` lists both locations. Pass `--sessions-root` or the full task directory when resuming a task from another project. New tasks always use the project-local default unless an override is set.
 
 Pass the same override to `autopilot`, `resume`, `status`, `bootstrap`, or `native` when using a task ID. `resume`, `native`, and `bootstrap --adopt` also accept the full task directory. The runner checks that it can create and atomically replace files before executing. In a restricted workspace, select a writable directory and verify that Git ignores it before storing private evidence.
 
@@ -24,10 +26,10 @@ The runner uses an OS lock on the persistent `.0xsdlc.guard` file. It releases w
 
 ## Native chat
 
-Use the local Python runner from the repo or installed runtime. The following examples assume `logs/0xsdlc` is already Git-ignored in the current repo.
+Use the local Python runner from the repo or installed runtime. The default session directory is already covered by the repository's `.agents/` ignore rule.
 
 ```text
-python scripts/0xSDLC.py autopilot "<request>" --native --sessions-root logs/0xsdlc
+python scripts/0xSDLC.py autopilot "<request>" --native
 python scripts/0xSDLC.py native open "<task-directory>" <phase>
 python scripts/0xSDLC.py native close "<task-directory>" <attempt-id> --outcome succeeded
 ```

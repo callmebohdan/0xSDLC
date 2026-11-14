@@ -51,7 +51,7 @@ class EndToEndTests(unittest.TestCase):
         self.assertIn("usage: 0xSDLC", result.stdout)
 
     def latest_task(self) -> Path:
-        tasks = list((Path(self.env["0XSDLC_AGENTS_HOME"]) / "sessions").iterdir())
+        tasks = list((self.workspace / ".agents" / "0xsdlc" / "sessions").iterdir())
         self.assertTrue(tasks)
         return max(tasks, key=lambda path: path.stat().st_mtime_ns)
 
@@ -116,6 +116,31 @@ class EndToEndTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(self.route(task)["status"], "completed")
         self.assertFalse((contracts.parent / "sessions").exists())
+
+    def test_project_local_default_and_legacy_task_lookup(self) -> None:
+        result = self.run_cli("autopilot", "fix project label", "--model", "generic")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        task = self.latest_task()
+        self.assertEqual(task.parent, self.workspace / ".agents" / "0xsdlc" / "sessions")
+        self.assertIn(task.name, self.run_cli("status").stdout)
+
+        legacy_root = Path(self.env["0XSDLC_AGENTS_HOME"]) / "sessions"
+        legacy_root.mkdir(parents=True)
+        legacy_task = legacy_root / task.name
+        task.rename(legacy_task)
+        self.assertIn(task.name, self.run_cli("status").stdout)
+        result = self.run_cli("resume", task.name)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(str(legacy_task).casefold(), result.stdout.casefold())
+
+    def test_nested_workspace_uses_repository_root_for_sessions(self) -> None:
+        nested = self.workspace / "packages" / "app"
+        nested.mkdir(parents=True)
+        (self.workspace / ".git").mkdir()
+        result = self.run_cli("autopilot", "fix nested label", "--model", "generic", "--workspace", str(nested))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        task = self.latest_task()
+        self.assertEqual(task.parent, self.workspace / ".agents" / "0xsdlc" / "sessions")
 
     def test_unwritable_session_root_fails_before_adapter(self) -> None:
         blocked = self.base / "file instead of directory"
