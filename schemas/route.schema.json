@@ -21,6 +21,7 @@
       "properties": {
         "design": {"type": "boolean"},
         "approval": {"type": "boolean"},
+        "parallel_checks": {"type": "boolean"},
         "maintainability_review": {"type": "boolean"},
         "quality_control": {"type": "boolean"}
       },
@@ -29,11 +30,59 @@
     "phase_states": {"type": "object", "additionalProperties": {"$ref": "#/$defs/phaseState"}},
     "events": {"type": "array", "items": {"type": "object", "required": ["event", "at"], "properties": {"event": {"type": "string"}, "at": {"type": "string"}, "reason": {"type": "string"}}, "additionalProperties": true}},
     "telemetry": {"$ref": "#/$defs/telemetry"},
+    "legacy_telemetry": {"type": "object"},
+    "execution": {"enum": ["adapter", "native", "retrospective"]},
     "created_at": {"type": "string"}
   },
   "$defs": {
-    "phaseState": {"type": "object", "required": ["status", "attempts", "lanes"], "properties": {"status": {"enum": ["pending", "running", "succeeded", "failed", "blocked", "needs-approval", "needs-review", "skipped"]}, "attempts": {"type": "integer", "minimum": 0}, "lanes": {"type": "object"}}, "additionalProperties": true},
-    "telemetry": {"type": "object", "required": ["calls", "duration_ms", "input_tokens", "output_tokens", "cost_usd"], "properties": {"calls": {"type": "integer", "minimum": 0}, "duration_ms": {"type": "integer", "minimum": 0}, "input_tokens": {"type": "integer", "minimum": 0}, "output_tokens": {"type": "integer", "minimum": 0}, "cost_usd": {"type": "number", "minimum": 0}}}
+    "count": {"type": "integer", "minimum": 0},
+    "nullableCount": {"type": ["integer", "null"], "minimum": 0},
+    "nullableNumber": {"type": ["number", "null"], "minimum": 0},
+    "nullableString": {"type": ["string", "null"]},
+    "id": {"type": "string", "pattern": "^[a-f0-9]{32}$"},
+    "phaseState": {
+      "type": "object", "required": ["status", "attempts", "lanes"],
+      "properties": {
+        "status": {"enum": ["pending", "running", "succeeded", "failed", "blocked", "needs-approval", "needs-review", "skipped"]},
+        "attempts": {"$ref": "#/$defs/count"},
+        "lanes": {"type": "object"},
+        "attempt_history": {"type": "array", "items": {"$ref": "#/$defs/attempt"}}
+      },
+      "additionalProperties": true
+    },
+    "attempt": {
+      "type": "object",
+      "required": ["attempt_id", "source", "provenance", "outcome", "started_at", "finished_at", "duration_ms", "commit_start", "commit_end", "call_ids", "artifacts"],
+      "properties": {
+        "attempt_id": {"$ref": "#/$defs/id"},
+        "source": {"enum": ["adapter", "native"]},
+        "provenance": {"enum": ["captured", "retrospective"]},
+        "outcome": {"enum": ["running", "succeeded", "failed", "blocked", "needs-review", "interrupted"]},
+        "started_at": {"type": "string"},
+        "finished_at": {"$ref": "#/$defs/nullableString"},
+        "duration_ms": {"$ref": "#/$defs/nullableCount"},
+        "commit_start": {"$ref": "#/$defs/nullableString"},
+        "commit_end": {"$ref": "#/$defs/nullableString"},
+        "call_ids": {"type": "array", "items": {"$ref": "#/$defs/id"}, "uniqueItems": true},
+        "artifacts": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+      }
+    },
+    "telemetry": {
+      "type": "object",
+      "required": ["calls", "duration_ms", "input_tokens", "output_tokens", "cost_usd"],
+      "properties": {
+        "calls": {"$ref": "#/$defs/count"},
+        "duration_ms": {"$ref": "#/$defs/nullableCount"},
+        "input_tokens": {"$ref": "#/$defs/nullableCount"},
+        "output_tokens": {"$ref": "#/$defs/nullableCount"},
+        "cache_read_tokens": {"$ref": "#/$defs/nullableCount"},
+        "cache_write_tokens": {"$ref": "#/$defs/nullableCount"},
+        "reasoning_tokens": {"$ref": "#/$defs/nullableCount"},
+        "inference_ms": {"$ref": "#/$defs/nullableNumber"},
+        "cost_usd": {"$ref": "#/$defs/nullableNumber"},
+        "coverage": {"type": "object", "additionalProperties": {"$ref": "#/$defs/count"}}
+      }
+    }
   },
   "allOf": [
     {

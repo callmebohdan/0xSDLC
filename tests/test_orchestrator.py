@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
+import socket
+import subprocess
+import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -15,6 +20,9 @@ SPEC = importlib.util.spec_from_file_location("orchestrator", ROOT / "scripts" /
 assert SPEC and SPEC.loader
 ORCHESTRATOR = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(ORCHESTRATOR)
+from sdlc_core.runner import start_attempt
+from sdlc_core.storage import recover_interrupted
+from sdlc_core.telemetry import prepare_call, record, start_call, sync_metrics
 INSTALL_SPEC = importlib.util.spec_from_file_location("install", ROOT / "scripts" / "install.py")
 assert INSTALL_SPEC and INSTALL_SPEC.loader
 INSTALLER = importlib.util.module_from_spec(INSTALL_SPEC)
@@ -22,6 +30,41 @@ INSTALL_SPEC.loader.exec_module(INSTALLER)
 
 
 class RouteTests(unittest.TestCase):
+    def test_call_replay_and_interrupted_parallel_recovery(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            task = Path(directory)
+            route = ORCHESTRATOR.route_payload(task.name, "fix label", "small", "generic", False, False, directory)
+            attempt = start_attempt(task, task, route, "audit")
+            completed = prepare_call(task, attempt, "audit", "primary", "generic", "audit.md")
+            started = prepare_call(task, attempt, "audit", "secondary", "generic", "audit-secondary.md")
+            pending = prepare_call(task, attempt, "audit", "third", "generic", "audit-third.md")
+            lanes = route["phase_states"]["audit"]["lanes"]
+            for call in (completed, started, pending):
+                lanes[call["lane"]] = {"status": "running", "call_id": call["call_id"]}
+            for call in (completed, started):
+                start_call(task, call, "generic")
+            sidecar = task / completed["telemetry_sidecar"]
+            sidecar.parent.mkdir(parents=True)
+            sidecar.write_text(json.dumps({"call_id": completed["call_id"], "input_tokens": 12, "output_tokens": 8, "cost_usd": 0.01}), encoding="utf-8")
+            completed.update(outcome="succeeded", finished_at="2026-11-09T00:00:00+00:00", duration_ms=25, exit_code=0)
+            record(task, route, completed)
+            record(task, route, {**completed, "duration_ms": 50})
+            self.assertTrue(recover_interrupted(route))
+            self.assertTrue(sync_metrics(task, route, recover=True))
+            self.assertFalse(sync_metrics(task, route, recover=True))
+            summary = route["telemetry"]
+            self.assertEqual((summary["calls"], summary["duration_ms"], summary["input_tokens"], summary["output_tokens"], summary["cost_usd"]), (2, 25, 12, 8, 0.01))
+            metrics = {event["call_id"]: event for event in map(json.loads, (task / "metrics.jsonl").read_text(encoding="utf-8").splitlines())}
+            self.assertEqual(metrics[pending["call_id"]]["outcome"], "not-started")
+            self.assertEqual(lanes["primary"]["status"], "succeeded")
+            self.assertEqual(lanes["third"]["status"], "not-started")
+            interrupted = metrics[started["call_id"]]
+            self.assertEqual((interrupted["outcome"], interrupted["provenance"]), ("interrupted", "retrospective"))
+            self.assertIsNone(interrupted["finished_at"])
+            self.assertIsNone(interrupted["duration_ms"])
+            self.assertEqual(attempt["outcome"], "interrupted")
+            self.assertIsNone(attempt["finished_at"])
+
     def test_standard_route_skips_design_until_needed(self) -> None:
         self.assertEqual(
             ORCHESTRATOR.route_for("standard", False, False),
@@ -91,10 +134,47 @@ class RouteTests(unittest.TestCase):
     def test_task_lock_rejects_concurrent_owner(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             task = Path(directory)
-            with ORCHESTRATOR.TaskLock(task):
-                with self.assertRaises(RuntimeError):
-                    with ORCHESTRATOR.TaskLock(task):
+            with ORCHESTRATOR.TaskLock(task) as owner:
+                past = time.time() - 3600
+                os.utime(owner.path, (past, past))
+                with self.assertRaisesRegex(RuntimeError, "locked by another run"):
+                    with ORCHESTRATOR.TaskLock(task, stale_seconds=0):
                         pass
+
+    def test_task_lock_rejects_live_legacy_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            lock = ORCHESTRATOR.TaskLock(Path(directory), stale_seconds=0)
+            lock.path.write_text(json.dumps({"pid": os.getpid(), "host": socket.gethostname()}), encoding="utf-8")
+            past = time.time() - 3600
+            os.utime(lock.path, (past, past))
+            with self.assertRaisesRegex(RuntimeError, "legacy task lock"):
+                with lock:
+                    pass
+
+    def test_task_lock_recovers_exited_owner(self) -> None:
+        owner_script = """
+import os
+import socket
+import sys
+from pathlib import Path
+sys.path.insert(0, 'scripts')
+from sdlc_core.storage import TaskLock, write_json
+lock = TaskLock(Path(sys.argv[1]))
+if sys.argv[2] == 'guarded':
+    lock.__enter__()
+else:
+    write_json(lock.path, {'pid': os.getpid(), 'host': socket.gethostname()})
+os._exit(0)
+"""
+        for mode, stale_seconds in (("guarded", 3600), ("legacy", 0)):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as directory:
+                result = subprocess.run([sys.executable, "-c", owner_script, directory, mode], cwd=ROOT, capture_output=True, text=True, timeout=15)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                lock = ORCHESTRATOR.TaskLock(Path(directory), stale_seconds=stale_seconds)
+                self.assertTrue(lock.path.is_file())
+                with lock:
+                    self.assertEqual(json.loads(lock.path.read_text(encoding="utf-8"))["pid"], os.getpid())
+                self.assertFalse(lock.path.exists())
 
     def test_current_route_is_normalized_when_optional_routing_field_is_missing(self) -> None:
         route = {

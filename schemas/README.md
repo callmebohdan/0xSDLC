@@ -6,4 +6,6 @@ Route schema `0.5` is current. It adds explicit task intent (`change`, `diagnose
 
 Migration to `0.5` supplies `mode: "change"` and `routing.quality_control: false` for old routes. Within a current schema, optional routing fields are normalized explicitly and recorded as route events.
 
+Optional attempt history, nullable usage totals, and per-metric coverage extend `0.5` without requiring a format change for existing routes. On resume, the runner retains legacy aggregates under `legacy_telemetry` and rebuilds covered totals from call journals. See [Sessions and output](../docs/session-output.md) for the call record layout.
+
 Schema changes must include migration behavior, regression tests, and release notes. Never rewrite old task artifacts solely to make them appear current.

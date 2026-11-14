@@ -17,13 +17,16 @@ Supported placeholders:
 | --- | --- |
 | `{prompt_file}` | generated instructions for the active phase |
 | `{workspace}` | repository root |
-| `{output_dir}` | `.agents/0xsdlc/sessions/<task-id>/` |
+| `{output_dir}` | `<sessions-root>/<task-id>/` |
 | `{task_id}` | stable task identifier |
+| `{output_artifact}` | report name for this attempt and lane |
+| `{call_id}` | stable identifier for this call, also exported as `0XSDLC_CALL_ID` |
+| `{telemetry_file}` | unique path for this call's optional usage sidecar |
 
 Example:
 
 ```powershell
-$env:0XSDLC_CODEX_COMMAND = 'codex exec --file {prompt_file}'
+$env:0XSDLC_CODEX_COMMAND = 'codex exec --file "{prompt_file}"'
 python scripts\0xSDLC.py autopilot "Implement the requested change" --model codex --execute
 ```
 
@@ -41,6 +44,8 @@ An adapter must:
 6. avoid leaking secrets or unrelated source data.
 
 It must not change route decisions, skip approvals, weaken guardrails, or claim tests it did not run.
+
+When the provider exposes usage, write a JSON object to `{telemetry_file}` with the exact `call_id` from `{call_id}` or `0XSDLC_CALL_ID`. Optional fields include `provider`, `model`, `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_write_tokens`, `reasoning_tokens`, `cost_usd`, `cost_source`, and `inference_ms`. Omit unknown values and send zero only when the provider reports zero. The runner ignores usage from a sidecar with a missing or different call ID. Existing commands that omit the sidecar can still execute and produce reports.
 
 ## Permission profiles
 

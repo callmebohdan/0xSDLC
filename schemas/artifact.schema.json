@@ -17,6 +17,8 @@
     "risk_level": {"enum": ["low", "medium", "high"]}
   },
   "allOf": [
+    {"if": {"properties": {"phase": {"const": "verify"}}}, "then": {"properties": {"status": {"enum": ["verified", "needs-review", "blocked"]}}}},
+    {"if": {"properties": {"status": {"const": "verified"}}}, "then": {"properties": {"phase": {"const": "verify"}}}},
     {"if": {"properties": {"phase": {"const": "review"}}}, "then": {"required": ["decision"]}},
     {"if": {"properties": {"decision": {"const": "fix"}}}, "then": {"required": ["blocking_findings"]}},
     {"if": {"properties": {"phase": {"const": "test"}, "schema_version": {"const": "0.2"}}}, "then": {"required": ["test_outcome"]}},

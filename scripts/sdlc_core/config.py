@@ -69,5 +69,8 @@ def library_path(relative: str) -> Path:
     return installed if installed.exists() else HARNESS_ROOT / relative
 
 
-def sessions_root() -> Path:
+def sessions_root(override: Path | None = None) -> Path:
+    configured = os.environ.get("0XSDLC_SESSIONS_ROOT")
+    if override is not None or configured:
+        return Path(override if override is not None else configured).expanduser().resolve()
     return system_library() / "sessions"
